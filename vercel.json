@@ -4,5 +4,5 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "outputDirectory": ".next",
-  "ignoreCommand": "bash scripts/vercel-skip-docs.sh"
+  "ignoreCommand": "bash \"$(git rev-parse --show-toplevel 2>/dev/null || echo .)/scripts/vercel-skip-docs.sh\""
 }
