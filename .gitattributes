@@ -1,0 +1,4 @@
+# Shell scripts run on Linux under Vercel's bash. A CRLF checkout makes every
+# line fail with $'\r': command not found — and vercel-skip-docs.sh decides
+# whether this site deploys at all, so that failure is a broken deploy pipeline.
+*.sh text eol=lf
