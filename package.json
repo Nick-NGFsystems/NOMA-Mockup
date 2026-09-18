@@ -11,6 +11,7 @@
     "doctor": "node scripts/ngf-doctor.mjs",
     "doctor:strict": "node scripts/ngf-doctor.mjs --strict",
     "sync-ngf": "node scripts/sync-ngf.mjs",
+    "catalog:export": "node --experimental-strip-types scripts/catalog-to-portal.mjs",
     "sync-ngf:check": "node scripts/sync-ngf.mjs --check"
   },
   "dependencies": {
