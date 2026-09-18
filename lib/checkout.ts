@@ -1,4 +1,4 @@
-import { PRODUCTS } from '@/lib/site-data'
+import { PRODUCTS, exactPriceToCents } from '@/lib/site-data'
 
 /**
  * Server-side authoritative pricing.
@@ -27,17 +27,10 @@ import { PRODUCTS } from '@/lib/site-data'
 /**
  * A base price may be a range ("From $39"), which is a MARKETING string, not a
  * chargeable amount. Anything not a single unambiguous price is refused.
+ *
+ * exactPriceToCents now lives in lib/site-data.ts beside the catalog it parses,
+ * so the product cards and this function share one parser and one data source.
  */
-function exactPriceToCents(raw: string): number | null {
-  const text = String(raw).trim()
-  // "From $39", "$39–$49", "$39 - $49" — all ambiguous, all refused.
-  if (/from|to|–|—|\bor\b/i.test(text)) return null
-  const matches = text.match(/\d+(?:\.\d+)?/g)
-  if (!matches || matches.length !== 1) return null
-  const n = Number(matches[0])
-  if (!Number.isFinite(n) || n <= 0) return null
-  return Math.round(n * 100)
-}
 
 export interface CheckoutLine {
   id: string

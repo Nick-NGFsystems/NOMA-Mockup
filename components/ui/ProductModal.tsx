@@ -3,6 +3,26 @@ import { useState, useEffect } from 'react'
 import { useCart } from '@/components/CartProvider'
 import type { ProductVariant } from '@/lib/site-data'
 
+/**
+ * Longest engraving we accept.
+ *
+ * 10 is NOMA's own published rule — the engraving section on /products reads
+ * "Add your message, a name, or a date — complimentary with every purchase. Up
+ * to 10 characters." Taken from there rather than invented.
+ *
+ * Two things for NOMA to confirm: that 10 still holds across every piece (a
+ * carabiner bar holds more than a herringbone tag), and that "complimentary"
+ * is still true, because the Blank/Engraved variants charge +$5. resolveCart()
+ * hard-caps at 200 server-side regardless, so this is the buyer-facing rule,
+ * not the security bound.
+ */
+const ENGRAVING_MAX_CHARS = 10
+
+/** A variant whose name means "this one gets engraved". */
+function isEngravedVariant(v: ProductVariant | undefined): boolean {
+  return Boolean(v && /engrav/i.test(v.size))
+}
+
 interface ProductModalProps {
   productId: string
   name: string
@@ -12,13 +32,14 @@ interface ProductModalProps {
   images?: string[]
   variants?: ProductVariant[]
   variantType?: string
+  customizable?: boolean
   imageOnly?: boolean
   onClose: () => void
 }
 
 export function ProductModal({
   productId, name, description, price, image, images,
-  variants, variantType = 'Size', imageOnly = false, onClose,
+  variants, variantType = 'Size', customizable = false, imageOnly = false, onClose,
 }: ProductModalProps) {
   const { addItem } = useCart()
 
@@ -42,13 +63,28 @@ export function ProductModal({
   const [added, setAdded] = useState(false)
   const [lightbox, setLightbox] = useState(false)
 
+  // Engraving is asked for when the piece is customizable AND either it has a
+  // Blank/Engraved choice and "Engraved" is selected, or it has no such choice
+  // at all (every one of these is engraved).
+  const engravedChoice = variants?.some(isEngravedVariant) ?? false
+  const wantsEngraving =
+    customizable && (engravedChoice ? isEngravedVariant(variants?.[selectedVariant]) : true)
+
+  const [engraving, setEngraving] = useState('')
+  const trimmedEngraving = engraving.trim()
+  // Charging the engraved upcharge with nothing to engrave is not an order
+  // anyone can fulfil, so it blocks rather than silently shipping a blank piece.
+  const engravingMissing = wantsEngraving && trimmedEngraving.length === 0
+
   const handleAddToCart = () => {
+    if (engravingMissing) return
     const selectedSize = hasVariants ? variants![selectedVariant].size : null
     addItem({
       id: selectedSize ? `${productId}-${selectedSize}` : productId,
       title: selectedSize ? `${name} (${selectedSize})` : name,
       price: currentPrice,
       image,
+      customization: wantsEngraving ? trimmedEngraving.slice(0, ENGRAVING_MAX_CHARS) : null,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1400)
@@ -313,14 +349,45 @@ export function ProductModal({
               </div>
             )}
 
+            {wantsEngraving && (
+              <div onClick={e => e.stopPropagation()} style={{ marginTop: '2px' }}>
+                <label
+                  htmlFor="pm-engraving"
+                  style={{ display: 'block', fontSize: '0.72rem', letterSpacing: '0.08em', textTransform: 'uppercase', color: 'var(--muted)', fontWeight: 600, marginBottom: '6px' }}
+                >
+                  Engraving text
+                </label>
+                <input
+                  id="pm-engraving"
+                  value={engraving}
+                  onChange={e => { setEngraving(e.target.value); setAdded(false) }}
+                  maxLength={ENGRAVING_MAX_CHARS}
+                  placeholder="Name, date, initials…"
+                  aria-describedby="pm-engraving-help"
+                  style={{
+                    width: '100%', padding: '10px 12px', borderRadius: '10px',
+                    border: '1px solid var(--border)', background: '#fff',
+                    fontSize: '0.95rem', fontFamily: 'inherit', color: 'var(--ink)',
+                  }}
+                />
+                <p id="pm-engraving-help" style={{ margin: '6px 0 0', fontSize: '0.72rem', color: 'var(--muted)' }}>
+                  {engraving.length}/{ENGRAVING_MAX_CHARS} characters · engraved exactly as typed
+                </p>
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
               <span className="pm-price">{currentPrice}</span>
               <button className="pm-add-btn" onClick={handleAddToCart}
+                disabled={engravingMissing}
+                title={engravingMissing ? 'Add your engraving text first' : undefined}
                 style={{
                   background: added
                     ? 'linear-gradient(135deg,#2a7a4a,#1e5c38)'
                     : 'linear-gradient(135deg,#1f1b16,#2b241d)',
                   color: '#fff',
+                  opacity: engravingMissing ? 0.5 : 1,
+                  cursor: engravingMissing ? 'not-allowed' : 'pointer',
                 }}>
                 {added ? 'Added!' : 'Add to Cart'}
               </button>

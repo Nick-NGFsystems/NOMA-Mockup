@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product } from '@/lib/site-data'
+import { priceRange } from '@/lib/site-data'
 import type { NgfSiteContent } from '@/lib/ngf'
 import { getItems, getGallery } from '@/lib/ngf'
 
@@ -103,10 +104,15 @@ function ProductCard({ product, index, gallery }: {
           {product.variants && product.variants.length > 1 ? (
             <div style={{ marginTop: '2px' }}>
               <span className="price">
-                {product.variants[0].price}
-                <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '0.9rem' }}>
-                  {' – '}{product.variants[product.variants.length - 1].price}
-                </span>
+                {priceRange(product)?.min ?? product.price}
+                {(() => {
+                  const r = priceRange(product)
+                  return r && r.min !== r.max ? (
+                    <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '0.9rem' }}>
+                      {' – '}{r.max}
+                    </span>
+                  ) : null
+                })()}
               </span>
               <p style={{
                 fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em',
@@ -121,15 +127,7 @@ function ProductCard({ product, index, gallery }: {
             </div>
           ) : (
             <div className="price-row">
-              <span
-                className="price"
-                data-ngf-field={`products.items.${index}.price`}
-                data-ngf-label="Price"
-                data-ngf-type="text"
-                data-ngf-section="Products"
-              >
-                {product.price}
-              </span>
+              <span className="price">{product.price}</span>
               {product.comparePrice && (
                 <span className="price-compare">{product.comparePrice}</span>
               )}
@@ -151,6 +149,7 @@ function ProductCard({ product, index, gallery }: {
           images={gallery.length > 0 ? gallery : product.images}
           variants={product.variants}
           variantType={product.variantType}
+          customizable={product.customizable}
           onClose={() => setModalOpen(false)}
         />
       )}
@@ -173,7 +172,9 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
       ...p,
       name:        ci.name        || p.name,
       description: ci.description || p.description,
-      price:       ci.price       || p.price,
+      // Price is NOT overlaid: resolveCart() charges from PRODUCTS, so a portal
+      // edit here would change the card and not the charge.
+      price:       p.price,
       image:       ci.image       || p.image,
     }
   })

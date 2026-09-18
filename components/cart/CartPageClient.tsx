@@ -1,7 +1,7 @@
 'use client'
 import Image from 'next/image'
 import Link from 'next/link'
-import { useCart } from '@/components/CartProvider'
+import { useCart, lineKey } from '@/components/CartProvider'
 
 function parsePrice(p: string) {
   return Number(p.replace(/[^0-9.]/g, '')) || 0
@@ -37,7 +37,7 @@ export function CartPageClient() {
           ) : (
             items.map((item) => (
               <article
-                key={item.id}
+                key={lineKey(item)}
                 className="flex gap-4 p-4 rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
               >
                 <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-[var(--beige)] shrink-0">
@@ -49,12 +49,17 @@ export function CartPageClient() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-serif text-lg text-[var(--ink)] truncate">{item.title}</h3>
+                  {item.customization && (
+                    <p className="mt-1 text-sm text-[var(--muted)] italic break-words">
+                      Engraving: “{item.customization}”
+                    </p>
+                  )}
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-semibold text-[var(--ink)]">{item.price}</span>
                     <div className="flex items-center gap-2">
                       <button
                         className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center text-lg text-[var(--ink)] hover:bg-[var(--beige)] transition-colors"
-                        onClick={() => updateQty(item.id, -1)}
+                        onClick={() => updateQty(lineKey(item), -1)}
                         aria-label="Decrease quantity"
                       >
                         −
@@ -62,7 +67,7 @@ export function CartPageClient() {
                       <span className="text-sm font-medium text-[var(--ink)] w-6 text-center">×{item.qty}</span>
                       <button
                         className="w-8 h-8 rounded-full border border-[var(--border)] flex items-center justify-center text-lg text-[var(--ink)] hover:bg-[var(--beige)] transition-colors"
-                        onClick={() => updateQty(item.id, 1)}
+                        onClick={() => updateQty(lineKey(item), 1)}
                         aria-label="Increase quantity"
                       >
                         +

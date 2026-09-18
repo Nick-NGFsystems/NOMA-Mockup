@@ -36,6 +36,51 @@ export interface Review {
   reviewer: string
 }
 
+/**
+ * Parse an exact, chargeable price into cents. Returns null for anything
+ * ambiguous.
+ *
+ * A base price may be a range ("From $39"), which is a MARKETING string, not a
+ * chargeable amount. Anything not a single unambiguous price is refused.
+ *
+ * THIS IS THE ONLY PRICE PARSER. resolveCart() charges with it and the product
+ * cards display with it, so a card cannot advertise a number the checkout would
+ * not honour. If you add a second parser, you have reintroduced that gap.
+ */
+export function exactPriceToCents(raw: string): number | null {
+  const text = String(raw).trim()
+  // "From $39", "$39–$49", "$39 - $49" — all ambiguous, all refused.
+  if (/from|to|–|—|\bor\b/i.test(text)) return null
+  const matches = text.match(/\d+(?:\.\d+)?/g)
+  if (!matches || matches.length !== 1) return null
+  const n = Number(matches[0])
+  if (!Number.isFinite(n) || n <= 0) return null
+  return Math.round(n * 100)
+}
+
+function formatCents(cents: number): string {
+  return cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`
+}
+
+/**
+ * The cheapest and priciest chargeable price for a product with variants,
+ * computed from the variants themselves rather than assuming array order.
+ * Returns null when nothing in the list can be priced exactly.
+ *
+ * Product prices are NOT portal-editable, by design: the catalog and its prices
+ * live here, in the same module resolveCart() charges from, while the client
+ * owns shipping, tax and policies in their portal Store tab (NGF-STANDARDS,
+ * "Rules that are about money"). An editable price field that does not reach
+ * the charge is a control that lies to the client.
+ */
+export function priceRange(product: Product): { min: string; max: string } | null {
+  const cents = (product.variants ?? [])
+    .map((v) => exactPriceToCents(v.price))
+    .filter((n): n is number => n !== null)
+  if (cents.length === 0) return null
+  return { min: formatCents(Math.min(...cents)), max: formatCents(Math.max(...cents)) }
+}
+
 export const PRODUCTS: Product[] = [
   {
     id: 'sheri-necklace',

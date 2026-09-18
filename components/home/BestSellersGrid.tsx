@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product, ProductVariant } from '@/lib/site-data'
+import { priceRange } from '@/lib/site-data'
 import type { NgfSiteContent } from '@/lib/ngf'
 import { getItems } from '@/lib/ngf'
 
@@ -19,6 +20,7 @@ interface ModalState {
   images?: string[]
   variants?: ProductVariant[]
   variantType?: string
+  customizable?: boolean
 }
 
 export function BestSellersGrid({ products, content }: BestSellersGridProps) {
@@ -32,11 +34,13 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
       productId: product.id,
       name: ci.name || product.name,
       description: ci.description || product.description,
-      price: ci.price || product.price,
+      // Authoritative, never the portal overlay — this value reaches the cart.
+      price: product.price,
       image: ci.image || product.image,
       images: product.images,
       variants: product.variants,
       variantType: product.variantType,
+      customizable: product.customizable,
     })
   }
 
@@ -55,7 +59,10 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
           const ci = contentItems[i] ?? {}
           const name = ci.name || product.name
           const description = ci.description || product.description
-          const price = ci.price || product.price
+          // Price is NOT overlaid from portal content. resolveCart() charges
+          // from PRODUCTS, so a portal price edit would change the card and not
+          // the charge. See priceRange() in lib/site-data.ts.
+          const price = product.price
           const comparePrice = product.comparePrice
           const badge = ci.badge || product.badge
           const image = ci.image || product.image
@@ -115,8 +122,13 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                 {product.variants && product.variants.length > 1 ? (
                   <div style={{ marginTop: '2px' }}>
                     <span className="price">
-                      {product.variants[0].price}
-                      <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '0.9rem' }}> – {product.variants[product.variants.length - 1].price}</span>
+                      {priceRange(product)?.min ?? product.price}
+                      {(() => {
+                        const r = priceRange(product)
+                        return r && r.min !== r.max ? (
+                          <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '0.9rem' }}> – {r.max}</span>
+                        ) : null
+                      })()}
                     </span>
                     <p style={{ fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '3px 0 0', fontWeight: 600 }}>
                       {product.variantType === 'Length' ? `${product.variants.length} lengths` : product.variantType === 'Style' ? 'blank or engraved' : `${product.variants.length} sizes`}
@@ -124,15 +136,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   </div>
                 ) : (
                   <div className="price-row">
-                    <span
-                      className="price"
-                      data-ngf-field={`bestSellers.items.${i}.price`}
-                      data-ngf-label="Price"
-                      data-ngf-type="text"
-                      data-ngf-section="Best Sellers"
-                    >
-                      {price}
-                    </span>
+                    <span className="price">{price}</span>
                     {comparePrice && <span className="price-compare">{comparePrice}</span>}
                     {product.badge === 'Sale' || (product.comparePrice && product.comparePrice !== price) ? (
                       <span className="sale-tag">Sale</span>
@@ -156,6 +160,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
           images={modal.images}
           variants={modal.variants}
           variantType={modal.variantType}
+          customizable={modal.customizable}
           onClose={() => setModal(null)}
         />
       )}

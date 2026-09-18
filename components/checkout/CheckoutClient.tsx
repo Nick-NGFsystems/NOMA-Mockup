@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useCart } from '@/components/CartProvider'
+import { useCart, lineKey } from '@/components/CartProvider'
 import { quote, formatCents, type StoreSettings } from '@/lib/ngf-store'
 
 /**
@@ -286,7 +286,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
         ) : (
           <>
             {items.map((i) => (
-              <div key={i.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--ink)' }}>
+              <div key={lineKey(i)} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--ink)' }}>
                 <span style={{ color: 'var(--muted)' }}>
                   {i.title} × {i.qty}
                   {i.customization ? <em style={{ display: 'block', fontSize: '0.8rem' }}>Engraving: {i.customization}</em> : null}

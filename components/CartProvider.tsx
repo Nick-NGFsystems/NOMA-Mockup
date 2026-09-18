@@ -18,10 +18,29 @@ export interface CartItem {
   customization?: string | null
 }
 
+/**
+ * Identity of a cart LINE, which is not the same as the product id.
+ *
+ * resolveCart() prices by `id` (`productId` or `productId-size`), so the id has
+ * to stay in that exact shape. But two different engravings of the same piece
+ * are two different lines — merging them by id would silently throw one
+ * engraving away and bump the quantity of the other. Dedupe and quantity
+ * changes key on this; the server still receives the plain `id`.
+ *
+ * Keyed as JSON rather than a delimiter-joined string: engraving text is free
+ * input, so any separator character a buyer could type could forge a collision
+ * between two genuinely different lines. JSON escaping removes that class of
+ * bug entirely.
+ */
+export function lineKey(item: { id: string; customization?: string | null }): string {
+  return JSON.stringify([item.id, item.customization ?? ''])
+}
+
 interface CartContextValue {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'qty'>) => void
-  updateQty: (id: string, delta: number) => void
+  /** Takes a lineKey(), not a product id. */
+  updateQty: (key: string, delta: number) => void
   /** Empty the cart. Call ONLY after a payment is confirmed settled. */
   clearCart: () => void
   totalQty: number
@@ -77,19 +96,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback((item: Omit<CartItem, 'qty'>) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.id === item.id)
+      const key = lineKey(item)
+      const existing = prev.find((i) => lineKey(i) === key)
       const next = existing
-        ? prev.map((i) => (i.id === item.id ? { ...i, qty: i.qty + 1 } : i))
+        ? prev.map((i) => (lineKey(i) === key ? { ...i, qty: i.qty + 1 } : i))
         : [...prev, { ...item, qty: 1 }]
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
       return next
     })
   }, [])
 
-  const updateQty = useCallback((id: string, delta: number) => {
+  /** `key` is a lineKey(), not a product id — see lineKey above. */
+  const updateQty = useCallback((key: string, delta: number) => {
     setItems((prev) => {
       const next = prev
-        .map((i) => (i.id === id ? { ...i, qty: i.qty + delta } : i))
+        .map((i) => (lineKey(i) === key ? { ...i, qty: i.qty + delta } : i))
         .filter((i) => i.qty > 0)
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
       return next

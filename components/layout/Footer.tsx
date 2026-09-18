@@ -36,6 +36,7 @@ export function Footer({ tagline }: FooterProps) {
           <Link href="/#collections" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Collections</Link>
           <Link href="/products#bundles" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Bundles</Link>
           <Link href="/#reviews" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Reviews</Link>
+          <Link href="/contact" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Contact</Link>
         </nav>
 
         {/* Legal */}

@@ -119,6 +119,7 @@ export function Header({ announcementText }: HeaderProps) {
     { href: '/products#engraving', label: 'Engraving' },
     { href: '/products#bundles',   label: 'Bundles' },
     { href: '/products',           label: 'Shop All' },
+    { href: '/contact',            label: 'Contact' },
   ]
 
   // Suppress hide for 1 s after clicking a nav link so the scroll
