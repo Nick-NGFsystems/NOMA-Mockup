@@ -1,16 +1,26 @@
 'use client'
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
-import type { Product } from '@/lib/site-data'
-import { priceRange } from '@/lib/site-data'
+import {
+  displayPrice,
+  formatCents,
+  variantCountLabel,
+  metalsInCatalog,
+  typesInCatalog,
+  filterProducts,
+  priceRange,
+  type CatalogProduct,
+} from '@/lib/catalog'
 import type { NgfSiteContent } from '@/lib/ngf'
 import { getItems, getGallery } from '@/lib/ngf'
 
-const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
-const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings', 'Engravable']
+// Metal and type chips are DERIVED from the products actually in the catalog.
+// They used to be hardcoded here and again in ShopByCategory, and neither list
+// matched the shop: the filters offered Silver, Pearl, Rose Gold, Diamond,
+// Earrings and Rings while every piece was a gold necklace or bracelet.
 
 interface ProductGridProps {
-  products: Product[]
+  products: CatalogProduct[]
   content: NgfSiteContent
   initialMetals?: string[]
   initialTypes?: string[]
@@ -18,13 +28,14 @@ interface ProductGridProps {
 
 type SortKey = 'featured' | 'price-asc' | 'price-desc'
 
-function parsePrice(p: string) {
-  return Number(p.replace(/[^0-9.]/g, '')) || 0
+/** Sort key: the cheapest amount this product can actually be bought for. */
+function sortPriceCents(p: CatalogProduct): number {
+  return priceRange(p)?.min ?? p.priceCents ?? 0
 }
 
 // ── Per-card component — owns modal state ─────────────────────────────────────
 function ProductCard({ product, index, gallery }: {
-  product: Product
+  product: CatalogProduct
   index: number
   /** Published extra photos, falling back to the hardcoded set. Used for BOTH
       the editor-only annotated container and the modal's thumbnail strip, so
@@ -101,38 +112,24 @@ function ProductCard({ product, index, gallery }: {
               : product.description}
           </p>
 
-          {product.variants && product.variants.length > 1 ? (
+          {displayPrice(product) !== null && (
             <div style={{ marginTop: '2px' }}>
-              <span className="price">
-                {priceRange(product)?.min ?? product.price}
-                {(() => {
-                  const r = priceRange(product)
-                  return r && r.min !== r.max ? (
-                    <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '0.9rem' }}>
-                      {' – '}{r.max}
-                    </span>
-                  ) : null
-                })()}
-              </span>
-              <p style={{
-                fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em',
-                textTransform: 'uppercase', margin: '3px 0 0', fontWeight: 600,
-              }}>
-                {product.variantType === 'Length'
-                  ? `${product.variants.length} lengths`
-                  : product.variantType === 'Style'
-                  ? 'blank or engraved'
-                  : `${product.variants.length} sizes`}
-              </p>
-            </div>
-          ) : (
-            <div className="price-row">
-              <span className="price">{product.price}</span>
-              {product.comparePrice && (
-                <span className="price-compare">{product.comparePrice}</span>
-              )}
-              {(product.badge === 'Sale' || (product.comparePrice && product.comparePrice !== product.price)) && (
-                <span className="sale-tag">Sale</span>
+              <div className="price-row">
+                <span className="price">{displayPrice(product)}</span>
+                {product.comparePriceCents && (
+                  <span className="price-compare">{formatCents(product.comparePriceCents)}</span>
+                )}
+                {(product.badge === 'Sale' || product.comparePriceCents) && (
+                  <span className="sale-tag">Sale</span>
+                )}
+              </div>
+              {variantCountLabel(product) && (
+                <p style={{
+                  fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em',
+                  textTransform: 'uppercase', margin: '3px 0 0', fontWeight: 600,
+                }}>
+                  {variantCountLabel(product)}
+                </p>
               )}
             </div>
           )}
@@ -144,11 +141,11 @@ function ProductCard({ product, index, gallery }: {
           productId={product.id}
           name={product.name}
           description={product.description}
-          price={product.price}
+          price={displayPrice(product) ?? ''}
           image={product.image}
           images={gallery.length > 0 ? gallery : product.images}
           variants={product.variants}
-          variantType={product.variantType}
+          variantType={product.variantLabel}
           customizable={product.customizable}
           onClose={() => setModalOpen(false)}
         />
@@ -172,9 +169,9 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
       ...p,
       name:        ci.name        || p.name,
       description: ci.description || p.description,
-      // Price is NOT overlaid: resolveCart() charges from PRODUCTS, so a portal
-      // edit here would change the card and not the charge.
-      price:       p.price,
+      // Price is deliberately absent: it comes from the catalog, which is what
+      // resolveCart() charges from. A portal overlay here would change the card
+      // and not the charge.
       image:       ci.image       || p.image,
     }
   })
@@ -185,19 +182,12 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
   const toggleType = (t: string) =>
     setActiveTypes((prev) => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n })
 
-  const filtered = enriched.filter((p) => {
-    const metalMatch = activeMetals.size === 0 || [...activeMetals].some((m) =>
-      p.metals?.some((metal) => metal.toLowerCase() === m.toLowerCase())
-    )
-    const typeMatch = activeTypes.size === 0 || [...activeTypes].some((t) =>
-      t === 'Engravable' ? p.customizable === true : p.category === t
-    )
-    return metalMatch && typeMatch
-  })
+  // Same filter function the homepage uses, so the two can never disagree.
+  const filtered = filterProducts(enriched, activeMetals, activeTypes)
 
   const sorted = [...filtered].sort((a, b) => {
-    if (sort === 'price-asc')  return parsePrice(a.price) - parsePrice(b.price)
-    if (sort === 'price-desc') return parsePrice(b.price) - parsePrice(a.price)
+    if (sort === 'price-asc')  return sortPriceCents(a) - sortPriceCents(b)
+    if (sort === 'price-desc') return sortPriceCents(b) - sortPriceCents(a)
     return 0
   })
 
@@ -296,7 +286,7 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
             <div className="category-group">
               <p className="eyebrow" style={{ marginBottom: '12px' }}>Metal</p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {METALS.map((m) => (
+                {metalsInCatalog(products).map((m) => (
                   <button key={m} style={pillStyle(activeMetals.has(m))} onClick={() => toggleMetal(m)}>{m}</button>
                 ))}
               </div>
@@ -304,7 +294,7 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
             <div className="category-group">
               <p className="eyebrow" style={{ marginBottom: '12px' }}>Type</p>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {TYPES.map((t) => (
+                {typesInCatalog(products).map((t) => (
                   <button key={t} style={pillStyle(activeTypes.has(t))} onClick={() => toggleType(t)}>{t}</button>
                 ))}
               </div>
@@ -356,7 +346,7 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
         data-ngf-item-label="Product"
         data-ngf-min-items="1"
         data-ngf-max-items="24"
-        data-ngf-item-fields='[{"key":"image","label":"Product Image","type":"image"},{"key":"name","label":"Product Name","type":"text"},{"key":"category","label":"Category","type":"text"},{"key":"price","label":"Price","type":"text"},{"key":"description","label":"Description","type":"textarea"}]'
+        data-ngf-item-fields='[{"key":"image","label":"Product Image","type":"image"},{"key":"name","label":"Product Name","type":"text"},{"key":"description","label":"Description","type":"textarea"}]'
       >
         {sorted.map((product, i) => (
           <ProductCard

@@ -1,10 +1,19 @@
 'use client'
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
-import type { Product, ProductVariant } from '@/lib/site-data'
+import {
+  displayPrice,
+  metalsInCatalog,
+  typesInCatalog,
+  filterProducts,
+  type CatalogProduct,
+  type CatalogVariant,
+} from '@/lib/catalog'
 
-const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
-const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings', 'Engravable']
+// Metal and type chips are DERIVED from the catalog — see lib/catalog.ts. The
+// hardcoded lists that used to live here advertised Silver, Pearl, Rose Gold,
+// Diamond, Earrings and Rings, none of which the shop has ever stocked, and
+// rendered a "soon" badge next to each one.
 
 interface ModalState {
   productId: string
@@ -13,24 +22,13 @@ interface ModalState {
   price: string
   image: string
   images?: string[]
-  variants?: ProductVariant[]
-  variantType?: string
-}
-
-function filterProducts(products: Product[], metals: Set<string>, types: Set<string>): Product[] {
-  return products.filter((p) => {
-    const metalMatch = metals.size === 0 || [...metals].some((m) =>
-      p.metals?.some((metal) => metal.toLowerCase() === m.toLowerCase())
-    )
-    const typeMatch = types.size === 0 || [...types].some((t) =>
-      t === 'Engravable' ? p.customizable === true : p.category === t
-    )
-    return metalMatch && typeMatch
-  })
+  variants?: CatalogVariant[]
+  variantLabel?: string
+  customizable?: boolean
 }
 
 interface ShopByCategoryProps {
-  products: Product[]
+  products: CatalogProduct[]
 }
 
 export function ShopByCategory({ products }: ShopByCategoryProps) {
@@ -92,7 +90,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
         <div className="category-group">
           <p className="eyebrow">Metals</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
-            {METALS.map((m) => {
+            {metalsInCatalog(products).map((m) => {
               const isActive = activeMetals.has(m)
               const count    = filterProducts(products, new Set([m]), new Set()).length
               return (
@@ -119,7 +117,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
         <div className="category-group">
           <p className="eyebrow">Types</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '12px' }}>
-            {TYPES.map((t) => {
+            {typesInCatalog(products).map((t) => {
               const isActive = activeTypes.has(t)
               const count    = filterProducts(products, new Set(), new Set([t])).length
               return (
@@ -182,7 +180,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
               {filtered.slice(0, 4).map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: product.price, image: product.image, images: product.images, variants: product.variants, variantType: product.variantType })}
+                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: displayPrice(product) ?? '', image: product.image, images: product.images, variants: product.variants, variantLabel: product.variantLabel, customizable: product.customizable })}
                   style={{
                     border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
                     background: '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
@@ -197,7 +195,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
                   </div>
                   <div style={{ padding: '10px 12px 12px' }}>
                     <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.name}</p>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--accent)', fontWeight: 700, margin: '2px 0 0' }}>{product.price}</p>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--accent)', fontWeight: 700, margin: '2px 0 0' }}>{displayPrice(product)}</p>
                   </div>
                 </button>
               ))}
@@ -210,7 +208,8 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
         <ProductModal
           productId={modal.productId} name={modal.name} description={modal.description}
           price={modal.price} image={modal.image} images={modal.images}
-          variants={modal.variants} variantType={modal.variantType}
+          variants={modal.variants} variantType={modal.variantLabel}
+          customizable={modal.customizable}
           onClose={() => setModal(null)}
         />
       )}

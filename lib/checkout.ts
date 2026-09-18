@@ -1,13 +1,17 @@
-import { PRODUCTS, exactPriceToCents } from '@/lib/site-data'
+import { getCatalog, unitPriceCents, type CatalogProduct } from '@/lib/catalog'
 
 /**
  * Server-side authoritative pricing.
  *
  * The cart lives in localStorage and its prices are DISPLAY ONLY — never trust
  * them for charging. resolveCart() re-derives every line's price from the
- * hardcoded PRODUCTS catalog, so a tampered client price cannot change what we
- * charge. Cart item ids are either `${productId}` or `${productId}-${size}`
+ * catalog, so a tampered client price cannot change what we charge. Cart item
+ * ids are either `${productId}` or `${productId}-${variantLabel}`
  * (e.g. `sheri-necklace-16"`).
+ *
+ * Prices are integer cents from lib/catalog.ts. There is no string parsing left
+ * in the money path: the catalog holds numbers, and a number is either present
+ * and valid or the product is not in the catalog at all.
  *
  * IT FAILS CLOSED. Every previous version of this function silently dropped or
  * silently re-priced anything it did not recognise, which is the wrong default
@@ -15,21 +19,13 @@ import { PRODUCTS, exactPriceToCents } from '@/lib/site-data'
  * not be charged a number nobody chose. Two concrete bugs that came from
  * failing open:
  *
- *   1. An unmatched size suffix fell back to the product's BASE price. Base
- *      prices in this catalog are strings like "From $39", so a 20" necklace
- *      that should cost $49 would have been charged $39. Undercharging, silently.
+ *   1. An unmatched variant suffix fell back to the product's BASE price. Base
+ *      prices were strings like "From $39", so a 20" necklace that should cost
+ *      $49 would have been charged $39. Undercharging, silently.
  *   2. Unknown ids were dropped from the cart entirely, so the customer was
  *      charged for less than their basket showed and had no idea.
  *
- * Both now reject the whole order with a reason.
- */
-
-/**
- * A base price may be a range ("From $39"), which is a MARKETING string, not a
- * chargeable amount. Anything not a single unambiguous price is refused.
- *
- * exactPriceToCents now lives in lib/site-data.ts beside the catalog it parses,
- * so the product cards and this function share one parser and one data source.
+ * Both reject the whole order with a reason.
  */
 
 export interface CheckoutLine {
@@ -60,6 +56,29 @@ export interface IncomingItem {
   customization?: string | null
 }
 
+/**
+ * Split a cart id into its product and variant.
+ *
+ * Exact id wins outright. Otherwise the LONGEST matching product id prefix wins
+ * — with bundles and pieces in one catalog, a plain `startsWith` would let a
+ * short id claim a longer product's cart line and price it as the wrong thing.
+ */
+function splitCartId(
+  cartId: string,
+  catalog: CatalogProduct[],
+): { product: CatalogProduct; variantLabel: string | null } | null {
+  const exact = catalog.find((p) => p.id === cartId)
+  if (exact) return { product: exact, variantLabel: null }
+
+  const prefixed = catalog
+    .filter((p) => cartId.startsWith(p.id + '-'))
+    .sort((a, b) => b.id.length - a.id.length)
+
+  const product = prefixed[0]
+  if (!product) return null
+  return { product, variantLabel: cartId.slice(product.id.length + 1) }
+}
+
 export function resolveCart(items: IncomingItem[]): ResolvedCart {
   if (!Array.isArray(items) || items.length === 0) {
     return { ok: false, reason: 'Your cart is empty.' }
@@ -68,6 +87,9 @@ export function resolveCart(items: IncomingItem[]): ResolvedCart {
     return { ok: false, reason: 'That is too many different items for one order.' }
   }
 
+  // getCatalog() already drops anything that cannot be priced, so an entry
+  // reaching this point is sellable by construction.
+  const catalog = getCatalog()
   const lines: CheckoutLine[] = []
 
   for (const item of items) {
@@ -83,39 +105,23 @@ export function resolveCart(items: IncomingItem[]): ResolvedCart {
       return { ok: false, reason: 'One of the quantities in your cart is not valid.' }
     }
 
-    const product = PRODUCTS.find(
-      (p) => item.id === p.id || item.id.startsWith(p.id + '-'),
-    )
-    if (!product) {
+    const split = splitCartId(item.id, catalog)
+    if (!split) {
       return { ok: false, reason: 'One of the items in your cart is no longer available.' }
     }
+    const { product, variantLabel } = split
 
-    let unitCents: number | null
-    let title = product.name
-    let variant: string | null = null
-
-    if (item.id === product.id) {
-      // No variant chosen. Only chargeable if the product has ONE unambiguous
-      // price — a product with variants has no single price, so requiring a
-      // choice is correct rather than guessing the cheapest.
-      if (product.variants && product.variants.length > 0) {
-        return { ok: false, reason: `Please choose a size for ${product.name}.` }
-      }
-      unitCents = exactPriceToCents(product.price)
-    } else {
-      const size = item.id.slice(product.id.length + 1)
-      const match = product.variants?.find((v) => v.size === size)
-      if (!match) {
-        // Previously this fell through to the base price. Now it refuses.
-        return { ok: false, reason: `That size is no longer available for ${product.name}.` }
-      }
-      unitCents = exactPriceToCents(match.price)
-      title = product.name
-      variant = size
-    }
-
+    const unitCents = unitPriceCents(product, variantLabel)
     if (unitCents === null) {
-      return { ok: false, reason: `We could not price ${product.name}. Please contact us to order.` }
+      // Either a variant was needed and not chosen, or the one chosen no longer
+      // exists. Both are refusals, never a guess at the intended price.
+      const needsChoice = Boolean(product.variants?.length) && !variantLabel
+      return {
+        ok: false,
+        reason: needsChoice
+          ? `Please choose a ${(product.variantLabel ?? 'size').toLowerCase()} for ${product.name}.`
+          : `That option is no longer available for ${product.name}.`,
+      }
     }
 
     const customization =
@@ -126,8 +132,8 @@ export function resolveCart(items: IncomingItem[]): ResolvedCart {
     lines.push({
       id: item.id,
       sku: product.id,
-      title,
-      variant,
+      title: product.name,
+      variant: variantLabel,
       qty,
       unitCents,
       lineCents: unitCents * qty,

@@ -1,14 +1,34 @@
 'use client'
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
-import type { Product, ProductVariant } from '@/lib/site-data'
-import { priceRange } from '@/lib/site-data'
+import {
+  displayPrice,
+  formatCents,
+  variantCountLabel,
+  type CatalogProduct,
+  type CatalogVariant,
+} from '@/lib/catalog'
 import type { NgfSiteContent } from '@/lib/ngf'
 import { getItems } from '@/lib/ngf'
 
 interface BestSellersGridProps {
-  products: Product[]
+  products: CatalogProduct[]
   content: NgfSiteContent
+  /**
+   * Which portal group edits these cards. Bundles render through this SAME
+   * component so they are purchasable by construction — they used to be a
+   * separate display-only card with a price and no route into the cart.
+   *
+   * `npm run doctor` warns that it cannot check a group path built at runtime,
+   * and asks for a hand check that the value is EXACTLY two segments
+   * (section.array) — a deeper path makes add/remove/reorder silently no-op.
+   * The literal union is that check, moved into the type system: both members
+   * are two segments, and a third value cannot be passed without editing this
+   * line and re-reading that rule.
+   */
+  groupKey?: 'bestSellers.items' | 'bundles.items'
+  section?: 'Best Sellers' | 'Bundles'
+  itemLabel?: string
 }
 
 interface ModalState {
@@ -18,28 +38,34 @@ interface ModalState {
   price: string
   image: string
   images?: string[]
-  variants?: ProductVariant[]
-  variantType?: string
+  variants?: CatalogVariant[]
+  variantLabel?: string
   customizable?: boolean
 }
 
-export function BestSellersGrid({ products, content }: BestSellersGridProps) {
+export function BestSellersGrid({
+  products,
+  content,
+  groupKey = 'bestSellers.items',
+  section = 'Best Sellers',
+  itemLabel = 'Product',
+}: BestSellersGridProps) {
   const [modal, setModal] = useState<ModalState | null>(null)
 
-  const contentItems = getItems(content, 'bestSellers.items')
+  const contentItems = getItems(content, groupKey)
 
-  const openModal = (product: Product, idx: number) => {
+  const openModal = (product: CatalogProduct, idx: number) => {
     const ci = contentItems[idx] ?? {}
     setModal({
       productId: product.id,
       name: ci.name || product.name,
       description: ci.description || product.description,
       // Authoritative, never the portal overlay — this value reaches the cart.
-      price: product.price,
+      price: displayPrice(product) ?? '',
       image: ci.image || product.image,
       images: product.images,
       variants: product.variants,
-      variantType: product.variantType,
+      variantLabel: product.variantLabel,
       customizable: product.customizable,
     })
   }
@@ -49,21 +75,22 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
       {/* ── Mini-grid ── */}
       <div
         className="best-sellers-grid"
-        data-ngf-group="bestSellers.items"
-        data-ngf-item-label="Product"
+        data-ngf-group={groupKey}
+        data-ngf-item-label={itemLabel}
         data-ngf-min-items="1"
         data-ngf-max-items="12"
-        data-ngf-item-fields='[{"key":"image","label":"Product Image","type":"image"},{"key":"badge","label":"Badge Text","type":"text"},{"key":"name","label":"Product Name","type":"text"},{"key":"description","label":"Description","type":"textarea"},{"key":"price","label":"Price","type":"text"}]'
+        data-ngf-item-fields='[{"key":"image","label":"Product Image","type":"image"},{"key":"badge","label":"Badge Text","type":"text"},{"key":"name","label":"Product Name","type":"text"},{"key":"description","label":"Description","type":"textarea"}]'
       >
         {products.map((product, i) => {
           const ci = contentItems[i] ?? {}
           const name = ci.name || product.name
           const description = ci.description || product.description
-          // Price is NOT overlaid from portal content. resolveCart() charges
-          // from PRODUCTS, so a portal price edit would change the card and not
-          // the charge. See priceRange() in lib/site-data.ts.
-          const price = product.price
-          const comparePrice = product.comparePrice
+          // Price is NOT overlaid from portal content: resolveCart() charges
+          // from the catalog, so a portal price edit would change the card and
+          // not the charge. null means "nothing honest to show" — the card then
+          // renders no price rather than a placeholder.
+          const price = displayPrice(product)
+          const comparePrice = product.comparePriceCents ? formatCents(product.comparePriceCents) : null
           const badge = ci.badge || product.badge
           const image = ci.image || product.image
 
@@ -80,10 +107,10 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   alt={name}
                   loading={i < 2 ? 'eager' : 'lazy'}
                   decoding="async"
-                  data-ngf-field={`bestSellers.items.${i}.image`}
+                  data-ngf-field={`${groupKey}.${i}.image`}
                   data-ngf-label="Product Image"
                   data-ngf-type="image"
-                  data-ngf-section="Best Sellers"
+                  data-ngf-section={section}
                 />
               </div>
               <div className="mini-body">
@@ -91,56 +118,48 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   <p
                     className="eyebrow"
                     style={{ fontSize: '0.85rem', letterSpacing: '0.12em', marginBottom: '2px' }}
-                    data-ngf-field={`bestSellers.items.${i}.badge`}
+                    data-ngf-field={`${groupKey}.${i}.badge`}
                     data-ngf-label="Badge Text"
                     data-ngf-type="text"
-                    data-ngf-section="Best Sellers"
+                    data-ngf-section={section}
                   >
                     {badge}
                   </p>
                 )}
                 <h3
                   style={{ fontSize: '1.2rem', margin: 0 }}
-                  data-ngf-field={`bestSellers.items.${i}.name`}
+                  data-ngf-field={`${groupKey}.${i}.name`}
                   data-ngf-label="Product Name"
                   data-ngf-type="text"
-                  data-ngf-section="Best Sellers"
+                  data-ngf-section={section}
                 >
                   {name}
                 </h3>
                 <p
                   style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)' }}
-                  data-ngf-field={`bestSellers.items.${i}.description`}
+                  data-ngf-field={`${groupKey}.${i}.description`}
                   data-ngf-label="Description"
                   data-ngf-type="textarea"
-                  data-ngf-section="Best Sellers"
+                  data-ngf-section={section}
                 >
                   {description.length > 72
                     ? description.slice(0, description.lastIndexOf(' ', 72)) + '…'
                     : description}
                 </p>
-                {product.variants && product.variants.length > 1 ? (
+                {price !== null && (
                   <div style={{ marginTop: '2px' }}>
-                    <span className="price">
-                      {priceRange(product)?.min ?? product.price}
-                      {(() => {
-                        const r = priceRange(product)
-                        return r && r.min !== r.max ? (
-                          <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '0.9rem' }}> – {r.max}</span>
-                        ) : null
-                      })()}
-                    </span>
-                    <p style={{ fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '3px 0 0', fontWeight: 600 }}>
-                      {product.variantType === 'Length' ? `${product.variants.length} lengths` : product.variantType === 'Style' ? 'blank or engraved' : `${product.variants.length} sizes`}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="price-row">
-                    <span className="price">{price}</span>
-                    {comparePrice && <span className="price-compare">{comparePrice}</span>}
-                    {product.badge === 'Sale' || (product.comparePrice && product.comparePrice !== price) ? (
-                      <span className="sale-tag">Sale</span>
-                    ) : null}
+                    <div className="price-row">
+                      <span className="price">{price}</span>
+                      {comparePrice !== null && <span className="price-compare">{comparePrice}</span>}
+                      {badge === 'Sale' || comparePrice !== null ? (
+                        <span className="sale-tag">Sale</span>
+                      ) : null}
+                    </div>
+                    {variantCountLabel(product) && (
+                      <p style={{ fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '3px 0 0', fontWeight: 600 }}>
+                        {variantCountLabel(product)}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>
@@ -159,7 +178,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
           image={modal.image}
           images={modal.images}
           variants={modal.variants}
-          variantType={modal.variantType}
+          variantType={modal.variantLabel}
           customizable={modal.customizable}
           onClose={() => setModal(null)}
         />

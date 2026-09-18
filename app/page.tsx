@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getNgfContent, getItems } from '@/lib/ngf'
-import { PRODUCTS, BUNDLES, REVIEWS } from '@/lib/site-data'
+import { getCatalog } from '@/lib/catalog'
 import { ShopSection } from '@/components/home/ShopSection'
 
 export const metadata: Metadata = {
@@ -9,11 +9,18 @@ export const metadata: Metadata = {
   description: 'Everyday waterproof jewelry designed to last.',
 }
 
-const BEST_SELLERS = PRODUCTS.slice(0, 6)
-
 export default async function HomePage() {
   const content = await getNgfContent()
   const reviewItems = getItems(content, 'reviews.items')
+  const hasReviews = reviewItems.length > 0
+  // One blank row when nothing is published, so the editor has an item to clone.
+  const reviewRows = hasReviews ? reviewItems : [{}]
+
+  // The catalog drops anything it cannot price, so these are all buyable.
+  const catalog = getCatalog()
+  const pieces = catalog.filter((p) => p.kind === 'piece')
+  const bundles = catalog.filter((p) => p.kind === 'bundle')
+  const bestSellers = pieces.slice(0, 6)
 
   // Hero
   const heroEyebrow = content['hero.eyebrow'] || 'Everyday Waterproof Jewelry'
@@ -128,14 +135,21 @@ export default async function HomePage() {
 
       {/* ── Unified Shop ── */}
       <ShopSection
-        bestSellers={BEST_SELLERS}
-        products={PRODUCTS}
-        bundles={BUNDLES}
+        bestSellers={bestSellers}
+        products={pieces}
+        bundles={bundles}
         content={content}
       />
 
       {/* ── Reviews ── */}
-      <section className="section testimonials" id="reviews">
+      {/* Hidden from the storefront until a real testimonial is published, but
+          ALWAYS server-rendered so the portal editor can discover the group —
+          an element absent from the SSR HTML cannot be edited, which would
+          leave NOMA unable to add the first review. */}
+      <section
+        className={`section testimonials${hasReviews ? '' : ' ngf-editor-only'}`}
+        id="reviews"
+      >
         <div className="section-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
           <p
             className="eyebrow"
@@ -163,12 +177,17 @@ export default async function HomePage() {
           data-ngf-max-items="8"
           data-ngf-item-fields='[{"key":"quote","label":"Quote","type":"textarea"},{"key":"reviewer","label":"Reviewer Name","type":"text"}]'
         >
-          {REVIEWS.map((review, i) => {
-            const ri = reviewItems[i] ?? {}
-            const quote = ri.quote || review.quote
-            const reviewer = ri.reviewer || review.reviewer
+          {/* Driven by what NOMA has actually PUBLISHED. This used to iterate a
+              hardcoded REVIEWS array whose entries read "Placeholder review #1 —
+              Sample Reviewer", and because they were `||` fallbacks they were
+              live on the homepage for real visitors. A testimonial is a claim
+              about a real customer, so the whole section now hides until there
+              is a real one to show. */}
+          {reviewRows.map((ri, i) => {
+            const quote = ri.quote || ''
+            const reviewer = ri.reviewer || ''
             return (
-              <article key={review.id} className="testimonial-card">
+              <article key={i} className="testimonial-card">
                 <p
                   style={{ color: 'var(--ink)', fontStyle: 'italic', lineHeight: 1.6 }}
                   data-ngf-field={`reviews.items.${i}.quote`}
@@ -192,7 +211,6 @@ export default async function HomePage() {
           })}
         </div>
       </section>
-
 
     </main>
   )

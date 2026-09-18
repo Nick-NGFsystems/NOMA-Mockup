@@ -1,12 +1,14 @@
 import type { Metadata } from 'next'
 import { getNgfContent } from '@/lib/ngf'
-import { PRODUCTS, BUNDLES } from '@/lib/site-data'
+import { getCatalog } from '@/lib/catalog'
 import { ProductGrid } from '@/components/products/ProductGrid'
+import { BestSellersGrid } from '@/components/home/BestSellersGrid'
 import { EngravingPreview } from '@/components/products/EngravingPreview'
 
 export const metadata: Metadata = {
   title: 'Shop All',
-  description: 'Browse the full NOMA collection — rings, necklaces, earrings, and bracelets.',
+  // Describes the shop without naming categories it may not stock.
+  description: 'Browse the full NOMA collection of waterproof fine jewelry.',
 }
 
 export default async function ProductsPage({ searchParams }: { searchParams: Promise<Record<string, string>> }) {
@@ -14,6 +16,10 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const initialMetals = params.metals ? params.metals.split(',') : []
   const initialTypes  = params.types  ? params.types.split(',')  : []
   const content = await getNgfContent()
+
+  const catalog = getCatalog()
+  const pieces = catalog.filter((p) => p.kind === 'piece')
+  const bundles = catalog.filter((p) => p.kind === 'bundle')
 
   const productsEyebrow = content['products.eyebrow'] || 'The NOMA Edit'
   const productsLede =
@@ -56,31 +62,27 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       {/* ── Product grid ── */}
       <div className="products-grid-wrapper">
-        <ProductGrid products={PRODUCTS} content={content} initialMetals={initialMetals} initialTypes={initialTypes} />
+        <ProductGrid products={pieces} content={content} initialMetals={initialMetals} initialTypes={initialTypes} />
       </div>
 
       {/* ── Bundles ── */}
+      {bundles.length > 0 && (
       <section className="section bundles" id="bundles">
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
           <p className="eyebrow">{bundlesEyebrow}</p>
           <h2>{bundlesHeadline}</h2>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}>
-          {BUNDLES.map((bundle) => (
-            <article key={bundle.id} className="bundle-card">
-              {bundle.badge && (
-                <span className="bundle-badge">{bundle.badge}</span>
-              )}
-              <h3>{bundle.name}</h3>
-              <p>{bundle.description}</p>
-              <div className="price-row">
-                <span className="price">{bundle.price}</span>
-                <span className="price-compare">{bundle.comparePrice}</span>
-              </div>
-            </article>
-          ))}
-        </div>
+        {/* Same grid as the pieces above, so a bundle can actually be bought.
+            This was a display-only card showing a price with no add-to-cart. */}
+        <BestSellersGrid
+          products={bundles}
+          content={content}
+          groupKey="bundles.items"
+          section="Bundles"
+          itemLabel="Bundle"
+        />
       </section>
+      )}
 
       {/* ── Engraving ── */}
       <section

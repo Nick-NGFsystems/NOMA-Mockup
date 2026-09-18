@@ -3,21 +3,20 @@ import { useState } from 'react'
 import { BestSellersGrid } from './BestSellersGrid'
 import { ShopByCategory } from './ShopByCategory'
 import { getItems } from '@/lib/ngf'
-import type { Product, Bundle } from '@/lib/site-data'
+import type { CatalogProduct } from '@/lib/catalog'
 import type { NgfSiteContent } from '@/lib/ngf'
 
 type Tab = 'bestsellers' | 'bundles'
 
 interface ShopSectionProps {
-  bestSellers: Product[]
-  products: Product[]
-  bundles: Bundle[]
+  bestSellers: CatalogProduct[]
+  products: CatalogProduct[]
+  bundles: CatalogProduct[]
   content: NgfSiteContent
 }
 
 export function ShopSection({ bestSellers, products, bundles, content }: ShopSectionProps) {
   const [activeTab, setActiveTab]   = useState<Tab>('bestsellers')
-  const bundleItems = getItems(content, 'bundles.items')
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'bestsellers', label: 'Best Sellers' },
@@ -83,39 +82,22 @@ export function ShopSection({ bestSellers, products, bundles, content }: ShopSec
         )}
 
         {activeTab === 'bundles' && (
-          <div
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}
-            data-ngf-group="bundles.items"
-            data-ngf-item-label="Bundle"
-            data-ngf-min-items="1"
-            data-ngf-max-items="8"
-            data-ngf-item-fields='[{"key":"badge","label":"Badge","type":"text"},{"key":"name","label":"Bundle Name","type":"text"},{"key":"description","label":"Description","type":"textarea"},{"key":"price","label":"Price","type":"text"},{"key":"comparePrice","label":"Compare Price","type":"text"}]'
-          >
-            {bundles.map((bundle, i) => {
-              const bi          = bundleItems[i] ?? {}
-              const name        = bi.name         || bundle.name
-              const description = bi.description  || bundle.description
-              const price       = bi.price        || bundle.price
-              const comparePrice = bi.comparePrice || bundle.comparePrice
-              const badge       = bi.badge        || bundle.badge
-              return (
-                <article key={bundle.id} className="bundle-card">
-                  {badge && (
-                    <span className="bundle-badge"
-                      data-ngf-field={`bundles.items.${i}.badge`}
-                      data-ngf-label="Badge" data-ngf-type="text" data-ngf-section="Bundles"
-                    >{badge}</span>
-                  )}
-                  <h3 data-ngf-field={`bundles.items.${i}.name`} data-ngf-label="Bundle Name" data-ngf-type="text" data-ngf-section="Bundles">{name}</h3>
-                  <p data-ngf-field={`bundles.items.${i}.description`} data-ngf-label="Description" data-ngf-type="textarea" data-ngf-section="Bundles">{description}</p>
-                  <div className="price-row">
-                    <span className="price" data-ngf-field={`bundles.items.${i}.price`} data-ngf-label="Price" data-ngf-type="text" data-ngf-section="Bundles">{price}</span>
-                    <span className="price-compare" data-ngf-field={`bundles.items.${i}.comparePrice`} data-ngf-label="Compare Price" data-ngf-type="text" data-ngf-section="Bundles">{comparePrice}</span>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
+          bundles.length === 0 ? (
+            <p style={{ textAlign: 'center', color: 'var(--muted)', padding: '32px 0' }}>
+              No bundles are available right now.
+            </p>
+          ) : (
+            /* Bundles render through the SAME grid as everything else, so they
+               open the same modal and go into the same cart. They used to be
+               display-only cards showing a price with no way to buy them. */
+            <BestSellersGrid
+              products={bundles}
+              content={content}
+              groupKey="bundles.items"
+              section="Bundles"
+              itemLabel="Bundle"
+            />
+          )
         )}
       </div>
 

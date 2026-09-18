@@ -776,3 +776,19 @@ html[data-ngf-edit='true'] .ngf-editor-only-gallery img {
   object-fit: cover;
   display: block;
 }
+
+/* An empty repeatable group still has to exist in the server-rendered HTML,
+   or the portal editor cannot discover it and the client can never add the
+   FIRST item — the same reason .ngf-editor-only-gallery above is hidden with
+   `display: none` rather than removed. Used by the reviews section, which
+   stays out of the storefront until NOMA publishes a real testimonial but
+   remains fully editable in the portal the whole time.
+
+   Do not remove the element conditionally instead. */
+.ngf-editor-only {
+  display: none;
+}
+
+html[data-ngf-edit='true'] .ngf-editor-only {
+  display: block;
+}

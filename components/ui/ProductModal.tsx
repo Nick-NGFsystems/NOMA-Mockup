@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useCart } from '@/components/CartProvider'
-import type { ProductVariant } from '@/lib/site-data'
+import { formatCents, type CatalogVariant } from '@/lib/catalog'
 
 /**
  * Longest engraving we accept.
@@ -19,8 +19,8 @@ import type { ProductVariant } from '@/lib/site-data'
 const ENGRAVING_MAX_CHARS = 10
 
 /** A variant whose name means "this one gets engraved". */
-function isEngravedVariant(v: ProductVariant | undefined): boolean {
-  return Boolean(v && /engrav/i.test(v.size))
+function isEngravedVariant(v: CatalogVariant | undefined): boolean {
+  return Boolean(v && /engrav/i.test(v.label))
 }
 
 interface ProductModalProps {
@@ -30,7 +30,7 @@ interface ProductModalProps {
   price: string
   image: string
   images?: string[]
-  variants?: ProductVariant[]
+  variants?: CatalogVariant[]
   variantType?: string
   customizable?: boolean
   imageOnly?: boolean
@@ -57,7 +57,7 @@ export function ProductModal({
 
   const hasVariants = variants && variants.length > 0
   const [selectedVariant, setSelectedVariant] = useState(0)
-  const currentPrice = hasVariants ? variants![selectedVariant].price : price
+  const currentPrice = hasVariants ? formatCents(variants![selectedVariant].priceCents) : price
 
   const [descOpen, setDescOpen] = useState(false)
   const [added, setAdded] = useState(false)
@@ -78,7 +78,7 @@ export function ProductModal({
 
   const handleAddToCart = () => {
     if (engravingMissing) return
-    const selectedSize = hasVariants ? variants![selectedVariant].size : null
+    const selectedSize = hasVariants ? variants![selectedVariant].label : null
     addItem({
       id: selectedSize ? `${productId}-${selectedSize}` : productId,
       title: selectedSize ? `${name} (${selectedSize})` : name,
@@ -340,10 +340,10 @@ export function ProductModal({
             {hasVariants && (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }} onClick={e => e.stopPropagation()}>
                 {variants!.map((v, i) => (
-                  <button key={v.size}
+                  <button key={v.label}
                     className={`pm-pill${i === selectedVariant ? ' active' : ''}`}
                     onClick={() => { setSelectedVariant(i); setAdded(false) }}>
-                    {v.size}<span>{v.price}</span>
+                    {v.label}<span>{formatCents(v.priceCents)}</span>
                   </button>
                 ))}
               </div>
