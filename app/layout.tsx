@@ -5,7 +5,7 @@ import NgfEditBridge from '@/components/NgfEditBridge'
 import { CartProvider } from '@/components/CartProvider'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
-import { getNgfContent } from '@/lib/ngf'
+import { getNgfContent, siteBaseUrl } from '@/lib/ngf'
 
 const cormorant = Cormorant_Garamond({
   variable: '--font-cormorant',
@@ -18,8 +18,13 @@ const manrope = Manrope({
   subsets: ['latin'],
 })
 
+// One source of truth for the public host, shared with the content lookup in
+// lib/ngf.ts. A hand-rolled literal here drifts from NEXT_PUBLIC_SITE_URL and
+// hides a broken portal binding behind a correct-looking canonical URL.
+const BASE = siteBaseUrl()
+
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.noelleandmary.com'),
+  metadataBase: new URL(BASE),
   other: {
     'ngf-public-api': 'https://app.ngfsystems.com/api/public/content',
   },
@@ -80,11 +85,11 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: 'NOMA Designs' }],
   alternates: {
-    canonical: 'https://www.noelleandmary.com',
+    canonical: BASE,
   },
   openGraph: {
     type: 'website',
-    url: 'https://www.noelleandmary.com',
+    url: BASE,
     locale: 'en_US',
     siteName: 'NOMA Designs',
     title: 'NOMA Designs | Waterproof Fine Jewelry – Grand Rapids, MI',
@@ -106,12 +111,12 @@ const jsonLd = {
   '@graph': [
     {
       '@type': 'Organization',
-      '@id': 'https://www.noelleandmary.com/#organization',
+      '@id': `${BASE}/#organization`,
       name: 'NOMA Designs',
-      url: 'https://www.noelleandmary.com',
+      url: BASE,
       logo: {
         '@type': 'ImageObject',
-        url: 'https://www.noelleandmary.com/assets/logos/noma-logo-v4-og.png',
+        url: `${BASE}/assets/logos/noma-logo-v4-og.png`,
       },
       description:
         'Everyday waterproof fine jewelry — gold necklaces, bracelets, rings, earrings, and custom engraving. Based in Grand Rapids, Michigan.',
@@ -125,17 +130,17 @@ const jsonLd = {
     },
     {
       '@type': 'WebSite',
-      '@id': 'https://www.noelleandmary.com/#website',
-      url: 'https://www.noelleandmary.com',
+      '@id': `${BASE}/#website`,
+      url: BASE,
       name: 'NOMA Designs',
-      publisher: { '@id': 'https://www.noelleandmary.com/#organization' },
+      publisher: { '@id': `${BASE}/#organization` },
     },
     {
       '@type': 'Store',
-      '@id': 'https://www.noelleandmary.com/#store',
+      '@id': `${BASE}/#store`,
       name: 'NOMA Designs',
-      url: 'https://www.noelleandmary.com',
-      image: 'https://www.noelleandmary.com/assets/logos/noma-logo-v4-og.png',
+      url: BASE,
+      image: `${BASE}/assets/logos/noma-logo-v4-og.png`,
       description:
         'Waterproof fine jewelry — necklaces, bracelets, rings, earrings in 14k gold, sterling silver, and rose gold. Custom engraving available. Based in Grand Rapids, MI.',
       address: {

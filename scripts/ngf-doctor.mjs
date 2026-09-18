@@ -90,6 +90,46 @@ for (const f of FILES) {
   }
 }
 
+// ── 1b. Next.js is a patched release ───────────────────────────────────────
+// CVE-2026-44575 (GHSA-267c-6grr-h53f) is a middleware/proxy bypass in every
+// App Router release before 15.5.16 and 16.2.5. A site pinned to an older
+// minor is not "stable", it is unpatched: upstream fixes only the newest minor
+// of each supported major, so 15.3.x and 16.1.x never received it. On
+// 2026-09-13 ten of eleven NGF sites were on one of those. The floors below are
+// the first patched release of each line — raise them when the next advisory
+// lands, never lower them.
+{
+  const NEXT_PATCHED_FLOOR = { 15: [15, 5, 16], 16: [16, 2, 5] }
+  const parse = (raw) => {
+    try { return JSON.parse(raw ?? '{}') } catch { return {} }
+  }
+  const declared = (parse(read('package.json')).dependencies ?? {}).next ?? ''
+  // Prefer what is actually locked: a caret range in package.json says
+  // nothing about what npm ci installs.
+  const locked = ((parse(read('package-lock.json')).packages ?? {})['node_modules/next'] ?? {}).version ?? ''
+  const raw = locked || declared
+  const m = /(\d+)\.(\d+)\.(\d+)/.exec(raw)
+  if (!m) {
+    warn('Next.js is a patched release', 'Could not read a Next.js version from package.json or package-lock.json.')
+  } else {
+    const v = [Number(m[1]), Number(m[2]), Number(m[3])]
+    const shown = `next ${v.join('.')} (${locked ? 'locked' : 'declared'})`
+    const floor = NEXT_PATCHED_FLOOR[v[0]]
+    const below = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2]
+    if (!floor) {
+      fail('Next.js is a patched release', `${shown} — only Next 15 and 16 are on the standards list; ${v[0] < 15 ? 'this major no longer receives security fixes.' : 'add this major to the doctor before adopting it.'}`)
+    } else if (below(v, floor) < 0) {
+      fail(
+        'Next.js is a patched release',
+        `${shown} is below ${floor.join('.')}, the first release of the ${v[0]}.x line with the fix for CVE-2026-44575 ` +
+          `(middleware bypass). Bump to the latest patch of ${floor[0]}.${floor[1]}.x or newer, regenerate the lockfile, redeploy.`,
+      )
+    } else {
+      ok('Next.js is a patched release', shown)
+    }
+  }
+}
+
 // ── 2. Instant publish (/api/revalidate) ─────────────────────────────────────
 const revPath = ['app/api/revalidate/route.ts', 'app/api/revalidate/route.js'].find(has)
 if (!revPath) {
@@ -107,6 +147,27 @@ if (!revPath) {
     fail('/api/revalidate fails closed', `${revPath} only checks the secret when it is set — with the env var missing, any caller gets a 200.`)
   } else {
     ok('/api/revalidate fails closed')
+  }
+  // The portal sends the secret it minted for THIS client and the site compares
+  // it against its own env var. The two only meet if the name matches exactly.
+  // A site reading REVALIDATION_SECRET (no WEBSITE_ prefix) answers every
+  // publish with 401 and the client waits out the 60s ISR window instead —
+  // which looks like "the editor is a bit slow", not like a broken integration,
+  // so it survives for months. One live site was found doing this.
+  const secretVars = [...rev.matchAll(/process\.env\.([A-Z0-9_]+)/g)].map((m) => m[1])
+  const revalidationVars = [...new Set(secretVars.filter((v) => /REVALIDAT/.test(v)))]
+  if (revalidationVars.length === 0) {
+    warn(
+      '/api/revalidate secret name',
+      `${revPath} reads no REVALIDATION env var — the portal cannot authenticate a cache-bust against this site.`,
+    )
+  } else if (!revalidationVars.includes('WEBSITE_REVALIDATION_SECRET')) {
+    fail(
+      '/api/revalidate secret name',
+      `${revPath} gates on ${revalidationVars.join(', ')}, but the portal sends the secret for WEBSITE_REVALIDATION_SECRET. Every instant publish 401s silently and the client waits out the 60s ISR window. Rename the env var on the site AND in Vercel.`,
+    )
+  } else {
+    ok('/api/revalidate secret name')
   }
 }
 
@@ -412,15 +473,124 @@ has('app/robots.ts') || has('app/robots.js')
   ? ok('app/robots.ts')
   : fail('app/robots.ts', 'Missing — hard blocker in the SEO launch gate.')
 
+// The host a sitemap emits must be the host the site is served on. Two live
+// sites shipped sitemaps under example.com for weeks: their sitemap.ts carried
+// its own `|| 'example.com'` fallback and NEXT_PUBLIC_SITE_URL was never set on
+// the Vercel project, so Google was told their pages lived on example.com and
+// the portal editor (which discovers pages from the sitemap) found nothing it
+// could use. lib/ngf.ts exports siteBaseUrl() — the ONE fallback chain, shared
+// with the content lookup — and sitemap.ts / robots.ts must use it.
+for (const p of ['app/sitemap.ts', 'app/sitemap.js', 'app/robots.ts', 'app/robots.js']) {
+  if (!has(p)) continue
+  const src = stripComments(read(p) ?? '')
+  if (/example\.com/.test(src)) {
+    fail(`Site host in ${p}`, `Contains a literal example.com fallback. Import siteBaseUrl() from lib/ngf.ts instead — with the env var unset this file tells search engines and the portal editor the site lives on example.com.`)
+  } else if (!/siteBaseUrl\s*\(/.test(src)) {
+    warn(`Site host in ${p}`, `Does not use siteBaseUrl() from lib/ngf.ts. A hand-rolled base drifts from the content lookup's fallback chain; run npm run sync-ngf and import it.`)
+  } else {
+    ok(`Site host in ${p}`)
+  }
+}
+
 const hasJsonLd = FILES.some((f) => /application\/ld\+json/.test(f.src))
 hasJsonLd ? ok('Structured data (JSON-LD)') : warn('Structured data (JSON-LD)', 'No LocalBusiness JSON-LD found — required by the SEO launch gate before launch.')
 
+// Dynamic routes must be enumerated in the sitemap or they are invisible to
+// Google. A static (non-async) sitemap cannot enumerate them — it has no way to
+// read published content. This has shipped: a portfolio grew nine [slug] pages
+// that never appeared in sitemap.xml, and every other SEO check still passed.
+{
+  const dynamicRoutes = FILES
+    .filter((f) => /(^|\/)app\/.*\[[^\]]+\]\/page\.(t|j)sx?$/.test(f.path))
+    .map((f) => f.path)
+
+  if (dynamicRoutes.length === 0) {
+    ok('Dynamic routes in sitemap', 'No dynamic routes to enumerate.')
+  } else {
+    const sitemapPath = ['app/sitemap.ts', 'app/sitemap.js'].find(has)
+    const sitemapSrc = sitemapPath ? stripComments(read(sitemapPath) ?? '') : ''
+    // An async sitemap is the only shape that can await published content.
+    const isAsync = /export\s+default\s+async\s+function/.test(sitemapSrc) ||
+                    /Promise<\s*MetadataRoute\.Sitemap\s*>/.test(sitemapSrc)
+
+    if (!sitemapPath) {
+      // Already failed above for the missing file; don't double-report.
+      ok('Dynamic routes in sitemap', 'Skipped — no sitemap to check.')
+    } else if (!isAsync) {
+      fail(
+        'Dynamic routes in sitemap',
+        `${dynamicRoutes.length} dynamic route(s) (${dynamicRoutes.join(', ')}) but ${sitemapPath} is a ` +
+          `static function, so it cannot emit their URLs. Those pages are invisible to search engines. ` +
+          `Make the sitemap async, read the same content source the route uses, and map over it.`,
+      )
+    } else {
+      ok('Dynamic routes in sitemap', `${dynamicRoutes.length} dynamic route(s); sitemap is async.`)
+    }
+  }
+}
+
 // ── 6. Build cost discipline ─────────────────────────────────────────────────
 const vercelJson = read('vercel.json')
+const skipScript = read('scripts/vercel-skip-docs.sh')
 if (!vercelJson) {
   warn('vercel.json ignoreCommand', 'No vercel.json — every commit (including docs-only) burns a build.')
 } else if (!/ignoreCommand/.test(vercelJson)) {
   warn('vercel.json ignoreCommand', 'No ignoreCommand — docs-only commits still trigger builds.')
+} else if (/HEAD\^/.test(vercelJson)) {
+  // The inline rule compares the LAST commit of a push to its parent. A push
+  // whose final commit is docs-only therefore cancels the WHOLE build, and the
+  // site silently keeps serving the previous deploy. It cost the main app a
+  // missing deploy on 2026-09-08.
+  warn(
+    'vercel.json ignoreCommand',
+    'Still on the inline HEAD^ rule: it sees only the last commit of a push, so a push ending in a docs-only commit skips the build and the site stays on old code. Use "bash scripts/vercel-skip-docs.sh", which diffs against the last deployment.',
+  )
+} else if (/vercel-skip-docs\.sh/.test(vercelJson) && !skipScript) {
+  // Vercel treats a non-0/1 exit from the ignore step as a FAILED deployment,
+  // so a missing script does not merely fail to skip — it breaks every deploy.
+  fail(
+    'vercel.json ignoreCommand',
+    'vercel.json runs scripts/vercel-skip-docs.sh but that file is not in the repo. Vercel reads a missing command as a failed deployment, so nothing deploys at all.',
+  )
+} else if (skipScript && !/^\s*\*\.sh\s+.*eol=lf/m.test(read('.gitattributes') || '')) {
+  // Deliberately checks .gitattributes, NOT the working copy's line endings.
+  // On Windows with core.autocrlf=true the checked-out file is CRLF even when
+  // the committed blob is LF — and it is the BLOB that Vercel gets, so failing
+  // on the working copy cries wolf in every repo on a Windows machine, which is
+  // how a launch gate gets ignored. The durable risk is the missing rule: with
+  // no '*.sh text eol=lf', a commit from Windows can persist CRLF into the blob,
+  // and then Linux bash fails on every line of the script that decides whether
+  // the site deploys at all.
+  fail(
+    'vercel.json ignoreCommand',
+    "scripts/vercel-skip-docs.sh exists but .gitattributes has no '*.sh text eol=lf' rule. Nothing stops a Windows commit storing it with CRLF, and Vercel's Linux bash then fails on every line — no deploys at all. Add the rule and re-commit the script.",
+  )
+} else if (!/rev-parse --show-toplevel/.test(vercelJson)) {
+  // Vercel runs the ignore step from the project's Root Directory, which is not
+  // always the repo root — a repo whose app sits in a subfolder runs it there.
+  // A relative `bash scripts/…` path is then simply not found, bash exits 127,
+  // and Vercel reads a non-0/1 exit as a FAILED deployment, not as "build".
+  // WrenchTime-Cycles hit exactly this on 2026-09-12.
+  fail(
+    'vercel.json ignoreCommand',
+    'ignoreCommand resolves the script relative to the working directory. Vercel runs it from the project Root Directory, which may be a subfolder, and bash then exits 127 — which Vercel treats as a failed deployment. Use: bash "$(git rev-parse --show-toplevel 2>/dev/null || echo .)/scripts/vercel-skip-docs.sh"',
+  )
+} else if (skipScript && !/rev-parse --show-toplevel/.test(skipScript)) {
+  // Worse than not finding the script: finding it and asking it the wrong
+  // question. The diff pathspec is `.`, which git reads relative to the CURRENT
+  // directory, so from a subfolder the script examines only that subtree and
+  // skips a deploy that changed anything above it — silently, as Canceled.
+  fail(
+    'vercel.json ignoreCommand',
+    'scripts/vercel-skip-docs.sh does not cd to the repo root before diffing. Run from a subfolder it would see only that subtree and skip deploys for changes above it. Re-sync the script from the starter.',
+  )
+} else if (skipScript && /\r\n/.test(skipScript)) {
+  // The rule exists, so the committed blob is LF and deploys are safe; this
+  // copy just has not been re-checked-out. Only affects running it locally.
+  warn(
+    'vercel.json ignoreCommand',
+    'Your working copy of scripts/vercel-skip-docs.sh has CRLF endings even though .gitattributes forces LF. Vercel is unaffected (it gets the LF blob), but running it locally will fail. Re-checkout the file to refresh it.',
+  )
 } else {
   ok('vercel.json ignoreCommand')
 }
@@ -576,6 +746,23 @@ const badDepth = [...groupDecls.keys()].filter((p) => p.split('.').length !== 2)
 badDepth.length
   ? fail('Group paths are 2 segments', `${badDepth.join(', ')} — add/remove/reorder controls silently no-op unless the path is exactly section.array.`)
   : ok('Group paths are 2 segments')
+
+// A card list whose item fields are ALL images is a photo set annotated the old
+// way: one popover per photo, no cover, and the client cannot add several at
+// once. Standards 2.12.0 retired that pattern — the container is ONE `gallery`
+// field, and the editor's Photos sheet manages the whole set.
+const imageOnlyLists = []
+for (const f of MARKUP_FILES) {
+  for (const m of f.src.matchAll(/data-ngf-item-fields=(?:'(\[[^']*\])'|"(\[[^"]*\])"|\{`(\[[^`]*\])`\})/g)) {
+    let fields
+    try { fields = JSON.parse(m[1] ?? m[2] ?? m[3]) } catch { continue }
+    if (!Array.isArray(fields) || fields.length === 0) continue
+    if (fields.every((x) => x && x.type === 'image')) imageOnlyLists.push(`${f.path} (${fields.map((x) => x.key).join(', ')})`)
+  }
+}
+imageOnlyLists.length
+  ? warn('Photo sets are gallery fields', `${imageOnlyLists.join('; ')} — a card list made only of images is a photo set. Annotate the container once as data-ngf-type="gallery" and read it with getGalleryPhotos(); the client then gets the Photos sheet (multi-upload, reorder, crop, cover). See NGF-STANDARDS "Photo collections".`)
+  : ok('Photo sets are gallery fields')
 
 // next/image with fill on an annotated element — bridge can't reach the <img>.
 for (const f of FILES) {
