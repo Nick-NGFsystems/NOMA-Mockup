@@ -20,12 +20,18 @@ const LAST_UPDATED = 'June 2026'
 
 export default async function PrivacyPolicyPage() {
   const content = await getNgfContent()
-  const businessName = content['brand.businessName'] || 'this business'
+  // Canonical paths only. NGF-STANDARDS: "Business name is always
+  // brand.businessName, phone is always brand.phone, address is always
+  // brand.address. Never footer.phone or contact.phone." These were on
+  // contact.* — paths the editor never surfaces — so the client could not
+  // reach them and this page rendered "this business" in production.
+  const businessName = content['brand.businessName'] || 'NOMA Designs'
   const primaryColor = content['brand.primaryColor'] || '#3B82F6'
-  const contactEmail = content['contact.email'] || ''
-  const contactPhone = content['contact.phone'] || ''
-  const contactAddress = content['contact.address'] || ''
-  const contactLine = contactEmail || 'the contact form on this website'
+  const contactEmail = content['brand.email'] || ''
+  const contactPhone = content['brand.phone'] || ''
+  const contactAddress = content['brand.address'] || ''
+  // No contact form exists on this site, so never promise one.
+  const contactLine = contactEmail || 'the email address on our homepage'
 
   return (
     <div className="min-h-screen" style={{ color: '#1f2937' }}>
@@ -39,7 +45,16 @@ export default async function PrivacyPolicyPage() {
 
         <div className="mt-8 space-y-8 text-[15px] leading-relaxed text-gray-700">
           <p>
-            This policy explains how <strong>{businessName}</strong> (&ldquo;we,&rdquo; &ldquo;us&rdquo;) collects, uses,
+            This policy explains how{' '}
+            <strong
+              data-ngf-field="brand.businessName"
+              data-ngf-label="Business Name"
+              data-ngf-type="text"
+              data-ngf-section="Brand"
+            >
+              {businessName}
+            </strong>{' '}
+            (&ldquo;we,&rdquo; &ldquo;us&rdquo;) collects, uses,
             and protects information when you visit this website or contact us through it. We only collect
             what we need to respond to you and run the site.
           </p>
@@ -122,6 +137,41 @@ export default async function PrivacyPolicyPage() {
             <p className="mt-2">Questions about this policy or your information? Reach {businessName} at {contactLine}
               {contactPhone ? `, or ${contactPhone}` : ''}.</p>
             {contactAddress && <p className="mt-1 whitespace-pre-line">{contactAddress}</p>}
+
+            {/* NGF-STANDARDS, "Hidden / invisible-but-editable fields": these are
+                used as JS variables and render conditionally, so without an
+                sr-only annotated span the scraper never sees them and the client
+                cannot fill them in from the portal. */}
+            <span
+              data-ngf-field="brand.email"
+              data-ngf-label="Contact Email"
+              data-ngf-type="text"
+              data-ngf-section="Brand"
+              aria-hidden="true"
+              className="sr-only"
+            >
+              {contactEmail}
+            </span>
+            <span
+              data-ngf-field="brand.phone"
+              data-ngf-label="Contact Phone"
+              data-ngf-type="text"
+              data-ngf-section="Brand"
+              aria-hidden="true"
+              className="sr-only"
+            >
+              {contactPhone}
+            </span>
+            <span
+              data-ngf-field="brand.address"
+              data-ngf-label="Business Address"
+              data-ngf-type="textarea"
+              data-ngf-section="Brand"
+              aria-hidden="true"
+              className="sr-only"
+            >
+              {contactAddress}
+            </span>
           </section>
         </div>
 
@@ -133,7 +183,16 @@ export default async function PrivacyPolicyPage() {
       </main>
 
       <footer className="py-8 px-4 text-center text-xs text-gray-400">
-        © {new Date().getFullYear()} {businessName}. All rights reserved.
+        © {new Date().getFullYear()}{' '}
+        <span
+          data-ngf-field="brand.businessName"
+          data-ngf-label="Business Name"
+          data-ngf-type="text"
+          data-ngf-section="Brand"
+        >
+          {businessName}
+        </span>
+        . All rights reserved.
       </footer>
     </div>
   )
