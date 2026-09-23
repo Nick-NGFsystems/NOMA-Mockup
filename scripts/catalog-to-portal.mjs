@@ -3,12 +3,17 @@
  * catalog-to-portal — turn this repo's lib/catalog.ts into the payload the NGF
  * portal's Products API expects.
  *
- *   npm run catalog:export             # JSON to stdout, summary to stderr
- *   npm run catalog:export > cat.json
+ *   npm run catalog:export                      # JSON to stdout, summary to stderr
+ *   npm run --silent catalog:export > cat.json  # --silent is REQUIRED
+ *
+ * --silent is not tidiness. `npm run` prints its own two-line banner
+ * ("> noma-site@0.1.0 catalog:export") to STDOUT, so without it the redirect
+ * captures the banner along with the JSON and cat.json is not valid JSON at
+ * all. The curl below would then PUT a malformed body to a money.write route.
  *
  * WHY THIS EXISTS RATHER THAN A HAND-TYPED FORM. The catalog moving to the
  * portal is a TRANSCRIPTION, not a redesign: every field in lib/catalog.ts
- * already has a column waiting for it. Re-typing eight products and seventeen
+ * already has a column waiting for it. Re-typing eight products and fifteen
  * prices into a web form is the one step of this migration where a typo becomes
  * a wrong charge, and nothing downstream would catch it — the portal would
  * faithfully serve whatever was entered. So the repo, which is the thing that
