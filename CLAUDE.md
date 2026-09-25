@@ -37,7 +37,7 @@ That doc has the full tech-stack rules, NGF editor integration spec, setup check
 
 | Layer | Tool | Version |
 |---|---|---|
-| Framework | Next.js App Router | 16.1.6 |
+| Framework | Next.js App Router | 16.3.6 |
 | Runtime | React | 19.2.3 |
 | Language | TypeScript | always |
 | Styling | Tailwind CSS | 4.x |
@@ -132,3 +132,5 @@ cp -r assets public/assets
 | Test orders | ⚠️ Present | Sandbox test orders sit in NOMA's portal looking like real sales — delete via the admin orders route before handover. Counts have differed between the portal view and a direct DB query, so check the portal itself rather than trusting a remembered number. |
 | Contact email | ⚠️ Placeholder | `hero.contactEmail` defaults to `mailto:hello@noma.com` — update via portal. |
 | Product reviews | ✅ Hidden until real (2026-09-25) | The four reviews in `lib/site-data.ts` are placeholders. They stay in the HTML so the portal editor can fill them in, but a card shows to visitors only once its quote is a real one (`lib/reviews.ts`), and the section and its header/footer "Reviews" links appear with the first real review. "Real" is decided by the text, not by what is published: the editor publishes the whole list with untouched cards backfilled, so placeholder quotes get published too. Keep the placeholder strings in `REVIEWS` unchanged, or the check stops recognising them. |
+| One necklace, two names | ⚠️ Asked NOMA (2026-09-25) | The portal publishes `bestSellers.items.2.name` = "Ayana Necklace", which the home page best-sellers show; the catalog in `lib/site-data.ts` (shop page, product modal, cart, checkout, server-side pricing) says "Alaina Necklace", and so do its photo paths. Both names are live on the site at once. Fix whichever is wrong once NOMA answers. Change only the display `name`: the checkout's server-side pricing matches cart items by the product `id` (`alaina-necklace`), so leave the id alone. |
+| Next.js | ✅ 16.3.6 (2026-09-25) | Was 16.1.6, inside CVE-2026-44575 (a middleware/proxy bypass). This site has no middleware, so it was not exploitable here, but upstream no longer patches 16.1.x. Storefront walked in Chromium before and after the bump (pages, product modal, add to cart, engraving cap, cart, checkout page, 404): identical. |
