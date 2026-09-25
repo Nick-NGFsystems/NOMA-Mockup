@@ -12,10 +12,12 @@ interface ShopSectionProps {
   bestSellers: Product[]
   products: Product[]
   bundles: Bundle[]
+  /** Best-seller cards stay editor-editable only while the built-in list is on sale. */
+  editable: boolean
   content: NgfSiteContent
 }
 
-export function ShopSection({ bestSellers, products, bundles, content }: ShopSectionProps) {
+export function ShopSection({ bestSellers, products, bundles, content, editable }: ShopSectionProps) {
   const [activeTab, setActiveTab]   = useState<Tab>('bestsellers')
   const bundleItems = getItems(content, 'bundles.items')
 
@@ -79,7 +81,7 @@ export function ShopSection({ bestSellers, products, bundles, content }: ShopSec
         `}</style>
 
         {activeTab === 'bestsellers' && (
-          <BestSellersGrid products={bestSellers} content={content} />
+          <BestSellersGrid products={bestSellers} content={content} editable={editable} />
         )}
 
         {activeTab === 'bundles' && (

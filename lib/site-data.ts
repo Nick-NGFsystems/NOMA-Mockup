@@ -1,6 +1,8 @@
 export interface ProductVariant {
   size: string   // e.g. '16"', '18"', '6"', '7"'
   price: string  // e.g. '$39'
+  /** Exact price in cents. Set on products from the portal; built-in ones are parsed from `price`. */
+  priceCents?: number
 }
 
 export interface Product {
@@ -19,6 +21,10 @@ export interface Product {
   variants?: ProductVariant[]
   /** Label shown above the selector — 'Length' for necklaces, 'Size' for bracelets */
   variantType?: string
+  /** Exact price in cents for a single-price product from the portal. */
+  priceCents?: number | null
+  /** Marked "Feature on the home page" in the portal. */
+  featured?: boolean
 }
 
 export interface Bundle {
@@ -36,6 +42,12 @@ export interface Review {
   reviewer: string
 }
 
+/**
+ * The BUILT-IN catalogue: what the shop sold before NOMA's products were entered
+ * in the NGF portal (Products page). lib/ngf-products.ts uses it only while the
+ * portal has no products for this site; once it has, the portal is the catalogue
+ * for display AND checkout, and this list is ignored.
+ */
 export const PRODUCTS: Product[] = [
   {
     id: 'sheri-necklace',

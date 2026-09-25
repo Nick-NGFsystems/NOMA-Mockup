@@ -11,6 +11,15 @@ const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings', 'Engravable']
 interface ProductGridProps {
   products: Product[]
   content: NgfSiteContent
+  /**
+   * True while the shop sells its BUILT-IN list (lib/ngf-products.ts): the
+   * portal editor may still relabel those products, exactly as before. False
+   * once NOMA's products come from the portal's Products page — then that page
+   * is the only place a product is edited, and none of these cards carry
+   * editor annotations, so the editor's sidebar stops offering a second,
+   * conflicting Products list.
+   */
+  editable: boolean
   initialMetals?: string[]
   initialTypes?: string[]
 }
@@ -22,9 +31,10 @@ function parsePrice(p: string) {
 }
 
 // ── Per-card component — owns modal state ─────────────────────────────────────
-function ProductCard({ product, index, gallery }: {
+function ProductCard({ product, index, gallery, editable }: {
   product: Product
   index: number
+  editable: boolean
   /** Published extra photos, falling back to the hardcoded set. Used for BOTH
       the editor-only annotated container and the modal's thumbnail strip, so
       what the client publishes is what customers actually see. */
@@ -45,7 +55,7 @@ function ProductCard({ product, index, gallery }: {
             alt={product.name}
             loading={index < 4 ? 'eager' : 'lazy'}
             decoding="async"
-            data-ngf-field={`products.items.${index}.image`}
+            data-ngf-field={editable ? `products.items.${index}.image` : undefined}
             data-ngf-label="Product Image"
             data-ngf-type="image"
             data-ngf-section="Products"
@@ -62,19 +72,21 @@ function ProductCard({ product, index, gallery }: {
             One direct child per photo with the <img> as a descendant: the bridge
             locates items with child.querySelector() and clones the last child
             when adding. */}
-        <div
-          className="ngf-editor-only-gallery"
-          data-ngf-field={`products.items.${index}.gallery`}
-          data-ngf-label="Extra Photos"
-          data-ngf-type="gallery"
-          data-ngf-section="Products"
-        >
-          {gallery.map((src, n) => (
-            <div key={n}>
-              <img src={src} alt="" loading="lazy" decoding="async" />
-            </div>
-          ))}
-        </div>
+        {editable && (
+          <div
+            className="ngf-editor-only-gallery"
+            data-ngf-field={editable ? `products.items.${index}.gallery` : undefined}
+            data-ngf-label="Extra Photos"
+            data-ngf-type="gallery"
+            data-ngf-section="Products"
+          >
+            {gallery.map((src, n) => (
+              <div key={n}>
+                <img src={src} alt="" loading="lazy" decoding="async" />
+              </div>
+            ))}
+          </div>
+        )}
 
         <div className="mini-body">
           {product.badge && (
@@ -87,7 +99,7 @@ function ProductCard({ product, index, gallery }: {
           )}
           <h3
             style={{ fontSize: '1.2rem', margin: 0 }}
-            data-ngf-field={`products.items.${index}.name`}
+            data-ngf-field={editable ? `products.items.${index}.name` : undefined}
             data-ngf-label="Product Name"
             data-ngf-type="text"
             data-ngf-section="Products"
@@ -123,7 +135,7 @@ function ProductCard({ product, index, gallery }: {
             <div className="price-row">
               <span
                 className="price"
-                data-ngf-field={`products.items.${index}.price`}
+                data-ngf-field={editable ? `products.items.${index}.price` : undefined}
                 data-ngf-label="Price"
                 data-ngf-type="text"
                 data-ngf-section="Products"
@@ -159,13 +171,13 @@ function ProductCard({ product, index, gallery }: {
 }
 
 // ── Main grid component ───────────────────────────────────────────────────────
-export function ProductGrid({ products, content, initialMetals = [], initialTypes = [] }: ProductGridProps) {
+export function ProductGrid({ products, content, editable, initialMetals = [], initialTypes = [] }: ProductGridProps) {
   const [activeMetals, setActiveMetals] = useState<Set<string>>(new Set(initialMetals))
   const [activeTypes,  setActiveTypes]  = useState<Set<string>>(new Set(initialTypes))
   const [sort,  setSort]  = useState<SortKey>('featured')
   const [filtersOpen, setFiltersOpen] = useState(initialMetals.length > 0 || initialTypes.length > 0)
 
-  const contentItems = getItems(content, 'products.items')
+  const contentItems = editable ? getItems(content, 'products.items') : []
 
   const enriched = products.map((p, i) => {
     const ci = contentItems[i] ?? {}
@@ -351,7 +363,8 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
       {/* ── Product grid ── */}
       <div
         className="product-grid"
-        data-ngf-group="products.items"
+        // A group only while the built-in list is on sale — see `editable`.
+        data-ngf-group={editable ? 'products.items' : undefined}
         data-ngf-item-label="Product"
         data-ngf-min-items="1"
         data-ngf-max-items="24"
@@ -362,7 +375,8 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
             key={product.id}
             product={product}
             index={i}
-            gallery={getGallery(content, `products.items.${i}.gallery`, product.images ?? [])}
+            editable={editable}
+            gallery={editable ? getGallery(content, `products.items.${i}.gallery`, product.images ?? []) : product.images ?? []}
           />
         ))}
 

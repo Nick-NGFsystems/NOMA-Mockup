@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getNgfContent } from '@/lib/ngf'
-import { PRODUCTS, BUNDLES } from '@/lib/site-data'
+import { BUNDLES } from '@/lib/site-data'
+import { getCatalog } from '@/lib/ngf-products'
 import { ProductGrid } from '@/components/products/ProductGrid'
 import { EngravingPreview } from '@/components/products/EngravingPreview'
 
@@ -13,7 +14,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const params = await searchParams
   const initialMetals = params.metals ? params.metals.split(',') : []
   const initialTypes  = params.types  ? params.types.split(',')  : []
-  const content = await getNgfContent()
+  const [content, catalog] = await Promise.all([getNgfContent(), getCatalog()])
 
   const productsEyebrow = content['products.eyebrow'] || 'The NOMA Edit'
   const productsLede =
@@ -56,7 +57,13 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       {/* ── Product grid ── */}
       <div className="products-grid-wrapper">
-        <ProductGrid products={PRODUCTS} content={content} initialMetals={initialMetals} initialTypes={initialTypes} />
+        <ProductGrid
+          products={catalog.products}
+          content={content}
+          editable={catalog.source === 'built-in'}
+          initialMetals={initialMetals}
+          initialTypes={initialTypes}
+        />
       </div>
 
       {/* ── Bundles ── */}

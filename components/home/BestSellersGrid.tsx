@@ -8,6 +8,13 @@ import { getItems } from '@/lib/ngf'
 interface BestSellersGridProps {
   products: Product[]
   content: NgfSiteContent
+  /**
+   * True while the shop sells its BUILT-IN list: the portal editor may relabel
+   * these cards, as before. False once NOMA's products come from the portal's
+   * Products page (lib/ngf-products.ts) — the featured products show as they
+   * were entered there, and the editor no longer offers these fields.
+   */
+  editable: boolean
 }
 
 interface ModalState {
@@ -21,10 +28,10 @@ interface ModalState {
   variantType?: string
 }
 
-export function BestSellersGrid({ products, content }: BestSellersGridProps) {
+export function BestSellersGrid({ products, content, editable }: BestSellersGridProps) {
   const [modal, setModal] = useState<ModalState | null>(null)
 
-  const contentItems = getItems(content, 'bestSellers.items')
+  const contentItems = editable ? getItems(content, 'bestSellers.items') : []
 
   const openModal = (product: Product, idx: number) => {
     const ci = contentItems[idx] ?? {}
@@ -45,7 +52,8 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
       {/* ── Mini-grid ── */}
       <div
         className="best-sellers-grid"
-        data-ngf-group="bestSellers.items"
+        // A group only while the built-in list is on sale — see `editable`.
+        data-ngf-group={editable ? 'bestSellers.items' : undefined}
         data-ngf-item-label="Product"
         data-ngf-min-items="1"
         data-ngf-max-items="12"
@@ -73,7 +81,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   alt={name}
                   loading={i < 2 ? 'eager' : 'lazy'}
                   decoding="async"
-                  data-ngf-field={`bestSellers.items.${i}.image`}
+                  data-ngf-field={editable ? `bestSellers.items.${i}.image` : undefined}
                   data-ngf-label="Product Image"
                   data-ngf-type="image"
                   data-ngf-section="Best Sellers"
@@ -84,7 +92,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   <p
                     className="eyebrow"
                     style={{ fontSize: '0.85rem', letterSpacing: '0.12em', marginBottom: '2px' }}
-                    data-ngf-field={`bestSellers.items.${i}.badge`}
+                    data-ngf-field={editable ? `bestSellers.items.${i}.badge` : undefined}
                     data-ngf-label="Badge Text"
                     data-ngf-type="text"
                     data-ngf-section="Best Sellers"
@@ -94,7 +102,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                 )}
                 <h3
                   style={{ fontSize: '1.2rem', margin: 0 }}
-                  data-ngf-field={`bestSellers.items.${i}.name`}
+                  data-ngf-field={editable ? `bestSellers.items.${i}.name` : undefined}
                   data-ngf-label="Product Name"
                   data-ngf-type="text"
                   data-ngf-section="Best Sellers"
@@ -103,7 +111,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                 </h3>
                 <p
                   style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)' }}
-                  data-ngf-field={`bestSellers.items.${i}.description`}
+                  data-ngf-field={editable ? `bestSellers.items.${i}.description` : undefined}
                   data-ngf-label="Description"
                   data-ngf-type="textarea"
                   data-ngf-section="Best Sellers"
@@ -126,7 +134,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   <div className="price-row">
                     <span
                       className="price"
-                      data-ngf-field={`bestSellers.items.${i}.price`}
+                      data-ngf-field={editable ? `bestSellers.items.${i}.price` : undefined}
                       data-ngf-label="Price"
                       data-ngf-type="text"
                       data-ngf-section="Best Sellers"
