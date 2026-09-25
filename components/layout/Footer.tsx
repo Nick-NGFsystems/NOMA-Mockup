@@ -3,9 +3,11 @@ import Link from 'next/link'
 
 interface FooterProps {
   tagline: string
+  /** False until a real review is published: the section is hidden, so is its link. */
+  showReviews: boolean
 }
 
-export function Footer({ tagline }: FooterProps) {
+export function Footer({ tagline, showReviews }: FooterProps) {
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--panel)] mt-24">
       <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center md:items-start gap-8 justify-between">
@@ -35,7 +37,9 @@ export function Footer({ tagline }: FooterProps) {
           <Link href="/#best-sellers" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Best Sellers</Link>
           <Link href="/#collections" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Collections</Link>
           <Link href="/products#bundles" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Bundles</Link>
-          <Link href="/#reviews" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Reviews</Link>
+          {showReviews && (
+            <Link href="/#reviews" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Reviews</Link>
+          )}
         </nav>
 
         {/* Legal */}

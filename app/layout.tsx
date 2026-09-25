@@ -6,6 +6,7 @@ import { CartProvider } from '@/components/CartProvider'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { getNgfContent } from '@/lib/ngf'
+import { hasLiveReviews } from '@/lib/reviews'
 
 const cormorant = Cormorant_Garamond({
   variable: '--font-cormorant',
@@ -169,6 +170,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     'Complimentary shipping over $100 | Personalization available'
 
   const footerTagline = content['brand.footerTagline'] || 'Fine jewelry, crafted with care.'
+  // The Reviews links follow the section: shown once a real review is published.
+  const showReviews = hasLiveReviews(content)
 
   return (
     <html lang="en">
@@ -185,9 +188,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </a>
         <NgfEditBridge />
         <CartProvider>
-<Header announcementText={announcementText} />
+<Header announcementText={announcementText} showReviews={showReviews} />
           <div id="main-content" style={{ paddingTop: 'calc(var(--banner-height) + var(--header-height))' }}>{children}</div>
-          <Footer tagline={footerTagline} />
+          <Footer tagline={footerTagline} showReviews={showReviews} />
         </CartProvider>
       </body>
     </html>

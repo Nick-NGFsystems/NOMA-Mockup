@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { getNgfContent, getItems } from '@/lib/ngf'
-import { PRODUCTS, BUNDLES, REVIEWS } from '@/lib/site-data'
+import { getNgfContent } from '@/lib/ngf'
+import { PRODUCTS, BUNDLES } from '@/lib/site-data'
+import { getReviewCards } from '@/lib/reviews'
 import { ShopSection } from '@/components/home/ShopSection'
 
 export const metadata: Metadata = {
@@ -13,7 +14,9 @@ const BEST_SELLERS = PRODUCTS.slice(0, 6)
 
 export default async function HomePage() {
   const content = await getNgfContent()
-  const reviewItems = getItems(content, 'reviews.items')
+  // Only real reviews reach visitors; the placeholders stay editor-only (lib/reviews.ts).
+  const reviews = getReviewCards(content)
+  const reviewsLive = reviews.some((review) => review.live)
 
   // Hero
   const heroEyebrow = content['hero.eyebrow'] || 'Everyday Waterproof Jewelry'
@@ -134,8 +137,10 @@ export default async function HomePage() {
         content={content}
       />
 
-      {/* ── Reviews ── */}
-      <section className="section testimonials" id="reviews">
+      {/* ── Reviews ──
+          Always in the HTML so the portal editor can fill the cards in; hidden
+          from visitors until at least one real review is published. */}
+      <section className={`section testimonials${reviewsLive ? '' : ' ngf-editor-only'}`} id="reviews">
         <div className="section-header" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
           <p
             className="eyebrow"
@@ -163,33 +168,29 @@ export default async function HomePage() {
           data-ngf-max-items="8"
           data-ngf-item-fields='[{"key":"quote","label":"Quote","type":"textarea"},{"key":"reviewer","label":"Reviewer Name","type":"text"}]'
         >
-          {REVIEWS.map((review, i) => {
-            const ri = reviewItems[i] ?? {}
-            const quote = ri.quote || review.quote
-            const reviewer = ri.reviewer || review.reviewer
-            return (
-              <article key={review.id} className="testimonial-card">
-                <p
-                  style={{ color: 'var(--ink)', fontStyle: 'italic', lineHeight: 1.6 }}
+          {reviews.map((review, i) => (
+            <article key={i} className={`testimonial-card${review.live ? '' : ' ngf-editor-only'}`}>
+              {/* The quote marks sit outside the editable span, so what NOMA types
+                  is exactly what is stored — the bridge writes the span's text. */}
+              <p style={{ color: 'var(--ink)', fontStyle: 'italic', lineHeight: 1.6 }}>
+                &ldquo;<span
                   data-ngf-field={`reviews.items.${i}.quote`}
                   data-ngf-label="Quote"
                   data-ngf-type="textarea"
                   data-ngf-section="Reviews"
-                >
-                  &ldquo;{quote}&rdquo;
-                </p>
-                <span
-                  className="testimonial-name"
-                  data-ngf-field={`reviews.items.${i}.reviewer`}
-                  data-ngf-label="Reviewer Name"
-                  data-ngf-type="text"
-                  data-ngf-section="Reviews"
-                >
-                  {reviewer}
-                </span>
-              </article>
-            )
-          })}
+                >{review.quote}</span>&rdquo;
+              </p>
+              <span
+                className={`testimonial-name${review.named ? '' : ' ngf-editor-only'}`}
+                data-ngf-field={`reviews.items.${i}.reviewer`}
+                data-ngf-label="Reviewer Name"
+                data-ngf-type="text"
+                data-ngf-section="Reviews"
+              >
+                {review.reviewer}
+              </span>
+            </article>
+          ))}
         </div>
       </section>
 

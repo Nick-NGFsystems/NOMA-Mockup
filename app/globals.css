@@ -361,6 +361,28 @@
   font-size: 0.85rem;
 }
 
+/* Reviews that are not real yet (lib/reviews.ts): kept in the HTML so the portal
+   editor can fill them in, hidden from visitors. The bridge sets
+   data-ngf-edit="true" on <html> in the editor (NGF-STANDARDS, "The editor-only
+   container pattern"). Two-class selectors so these win over the rules above. */
+.testimonials.ngf-editor-only,
+.testimonial-card.ngf-editor-only,
+.testimonial-name.ngf-editor-only {
+  display: none;
+}
+html[data-ngf-edit='true'] .testimonials.ngf-editor-only { display: block; }
+html[data-ngf-edit='true'] .testimonial-name.ngf-editor-only { display: inline; }
+html[data-ngf-edit='true'] .testimonial-card.ngf-editor-only {
+  display: grid;
+  border-style: dashed;
+}
+html[data-ngf-edit='true'] .testimonial-card.ngf-editor-only::before {
+  content: 'Sample review, hidden from visitors until you write over it';
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
 /* ── Bundle cards ── */
 .bundle-card {
   background: #ffffff;

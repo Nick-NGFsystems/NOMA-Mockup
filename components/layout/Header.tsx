@@ -7,9 +7,11 @@ import { useCart } from '@/components/CartProvider'
 
 interface HeaderProps {
   announcementText: string
+  /** False until a real review is published: the section is hidden, so is its link. */
+  showReviews: boolean
 }
 
-export function Header({ announcementText }: HeaderProps) {
+export function Header({ announcementText, showReviews }: HeaderProps) {
   const [navOpen, setNavOpen]       = useState(false)
   const [visible, setVisible]       = useState(true)
   const [activeHref, setActiveHref] = useState('')
@@ -72,7 +74,8 @@ export function Header({ announcementText }: HeaderProps) {
           ]
         : [
             { id: 'home',    href: '/#home' },
-            { id: 'reviews', href: '/#reviews' },
+            // A hidden section measures at top 0 and would always read as active.
+            ...(showReviews ? [{ id: 'reviews', href: '/#reviews' }] : []),
           ]
 
     const fallback = pathname === '/products' ? '/products' : '/#home'
@@ -98,7 +101,7 @@ export function Header({ announcementText }: HeaderProps) {
     update()
     window.addEventListener('scroll', update, { passive: true })
     return () => window.removeEventListener('scroll', update)
-  }, [pathname])
+  }, [pathname, showReviews])
 
   // ── Close nav on Escape ──────────────────────────────────────────────────
   useEffect(() => {
@@ -115,7 +118,7 @@ export function Header({ announcementText }: HeaderProps) {
 
   const navLinks = [
     { href: '/#home',              label: 'Home' },
-    { href: '/#reviews',           label: 'Reviews' },
+    ...(showReviews ? [{ href: '/#reviews', label: 'Reviews' }] : []),
     { href: '/products#engraving', label: 'Engraving' },
     { href: '/products#bundles',   label: 'Bundles' },
     { href: '/products',           label: 'Shop All' },
