@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { resolveCart, type IncomingItem } from '@/lib/checkout'
+import { getCheckoutCatalog } from '@/lib/ngf-products'
 import { quote, getStoreSettings } from '@/lib/ngf-store'
 import { createOrder, createPayment, cancelByIdempotencyKey, type Customer } from '@/lib/square-checkout'
 import { reportOrderToNgf, siteDomain, type OrderReportV1 } from '@/lib/ngf-order'
@@ -12,6 +13,8 @@ import { reportOrderToNgf, siteDomain, type OrderReportV1 } from '@/lib/ngf-orde
  *    iframes and sends only a single-use `sourceId`.
  *  - Prices are re-derived from the catalog server-side; client-sent prices are
  *    ignored entirely, and anything that cannot be priced exactly is refused.
+ *    The catalog is NOMA's products from the NGF portal (lib/ngf-products.ts);
+ *    if the portal cannot be read, nothing is charged.
  *  - The secret token lives only in server env.
  *
  * THE ORDERING PROBLEM — read before changing the sequence below.
@@ -118,7 +121,13 @@ export async function POST(req: Request) {
   if (!line1 || !city || !state || !postalCode) return bad('Please enter your full shipping address.')
 
   // ── A. Authoritative re-pricing ──
-  const resolved = resolveCart(items)
+  // From the same catalogue the shop pages show. Unreadable means unpriceable:
+  // refuse rather than charge from a built-in list NOMA may have re-priced.
+  const catalog = await getCheckoutCatalog()
+  if (!catalog) {
+    return bad('We could not load prices just now, so nothing has been charged. Please try again in a minute.', 503, 'config')
+  }
+  const resolved = resolveCart(items, catalog.products)
   if (!resolved.ok) return bad(resolved.reason)
 
   // Settings come from the client's portal, not from constants here — NOMA

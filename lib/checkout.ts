@@ -1,13 +1,14 @@
-import { PRODUCTS } from '@/lib/site-data'
+import type { Product } from '@/lib/site-data'
 
 /**
  * Server-side authoritative pricing.
  *
  * The cart lives in localStorage and its prices are DISPLAY ONLY — never trust
  * them for charging. resolveCart() re-derives every line's price from the
- * hardcoded PRODUCTS catalog, so a tampered client price cannot change what we
- * charge. Cart item ids are either `${productId}` or `${productId}-${size}`
- * (e.g. `sheri-necklace-16"`).
+ * catalogue it is given — the products NOMA manages in the NGF portal, or the
+ * built-in list before those exist (lib/ngf-products.ts decides which) — so a
+ * tampered client price cannot change what we charge. Cart item ids are either
+ * `${productId}` or `${productId}-${size}` (e.g. `sheri-necklace-16"`).
  *
  * IT FAILS CLOSED. Every previous version of this function silently dropped or
  * silently re-priced anything it did not recognise, which is the wrong default
@@ -67,7 +68,35 @@ export interface IncomingItem {
   customization?: string | null
 }
 
-export function resolveCart(items: IncomingItem[]): ResolvedCart {
+/**
+ * The exact price of one cart line's unit, in cents, or null when it cannot be
+ * priced exactly. Portal products carry cents; built-in ones carry display
+ * strings, which are parsed and refused when ambiguous ("From $39").
+ */
+export function unitPriceCents(product: Product, size: string | null): number | null {
+  if (size === null) {
+    // No variant chosen. Only chargeable if the product has ONE unambiguous
+    // price — a product with variants has no single price, so requiring a
+    // choice is correct rather than guessing the cheapest.
+    if (product.variants && product.variants.length > 0) return null
+    return product.priceCents ?? exactPriceToCents(product.price)
+  }
+  const match = product.variants?.find((v) => v.size === size)
+  if (!match) return null
+  return match.priceCents ?? exactPriceToCents(match.price)
+}
+
+/** Which catalogue product a cart id names, and the size it chose (if any). */
+export function findCartProduct(
+  catalog: Product[],
+  id: string,
+): { product: Product; size: string | null } | null {
+  const product = catalog.find((p) => id === p.id || id.startsWith(p.id + '-'))
+  if (!product) return null
+  return { product, size: id === product.id ? null : id.slice(product.id.length + 1) }
+}
+
+export function resolveCart(items: IncomingItem[], catalog: Product[]): ResolvedCart {
   if (!Array.isArray(items) || items.length === 0) {
     return { ok: false, reason: 'Your cart is empty.' }
   }
@@ -90,36 +119,23 @@ export function resolveCart(items: IncomingItem[]): ResolvedCart {
       return { ok: false, reason: 'One of the quantities in your cart is not valid.' }
     }
 
-    const product = PRODUCTS.find(
-      (p) => item.id === p.id || item.id.startsWith(p.id + '-'),
-    )
-    if (!product) {
+    const found = findCartProduct(catalog, item.id)
+    if (!found) {
       return { ok: false, reason: 'One of the items in your cart is no longer available.' }
     }
+    const { product, size } = found
 
-    let unitCents: number | null
-    let title = product.name
-    let variant: string | null = null
-
-    if (item.id === product.id) {
-      // No variant chosen. Only chargeable if the product has ONE unambiguous
-      // price — a product with variants has no single price, so requiring a
-      // choice is correct rather than guessing the cheapest.
-      if (product.variants && product.variants.length > 0) {
-        return { ok: false, reason: `Please choose a size for ${product.name}.` }
-      }
-      unitCents = exactPriceToCents(product.price)
-    } else {
-      const size = item.id.slice(product.id.length + 1)
-      const match = product.variants?.find((v) => v.size === size)
-      if (!match) {
-        // Previously this fell through to the base price. Now it refuses.
-        return { ok: false, reason: `That size is no longer available for ${product.name}.` }
-      }
-      unitCents = exactPriceToCents(match.price)
-      title = product.name
-      variant = size
+    if (size === null && product.variants && product.variants.length > 0) {
+      return { ok: false, reason: `Please choose a size for ${product.name}.` }
     }
+    if (size !== null && !product.variants?.some((v) => v.size === size)) {
+      // Previously this fell through to the base price. Now it refuses.
+      return { ok: false, reason: `That size is no longer available for ${product.name}.` }
+    }
+
+    const unitCents = unitPriceCents(product, size)
+    const title = product.name
+    const variant = size
 
     if (unitCents === null) {
       return { ok: false, reason: `We could not price ${product.name}. Please contact us to order.` }

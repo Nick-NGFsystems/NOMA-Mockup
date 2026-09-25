@@ -76,7 +76,21 @@ function newOrderRef() {
   return `noma_${rand}`.slice(0, 40)
 }
 
-export function CheckoutClient({ settings }: { settings: StoreSettings }) {
+export function CheckoutClient({
+  settings,
+  prices,
+}: {
+  settings: StoreSettings
+  /**
+   * Unit price in cents per cart id, from the catalogue the server charges
+   * from (lib/ngf-products.ts). The cart's own price strings were captured when
+   * each item was added, so after NOMA changes a price they are stale, and a
+   * total built from them is refused by /api/checkout as "Your total changed".
+   * The cart's string is only the fallback for an id the catalogue lacks —
+   * which the server then refuses with its own reason.
+   */
+  prices: Record<string, number>
+}) {
   const { items, clearCart } = useCart()
   const [status, setStatus] = useState<Status>('loading')
   const [message, setMessage] = useState<string>('')
@@ -92,10 +106,8 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
   const set = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }))
 
-  const subtotalCents = items.reduce(
-    (sum, i) => sum + Math.round(parsePrice(i.price) * 100) * i.qty,
-    0,
-  )
+  const unitCents = (i: { id: string; price: string }) => prices[i.id] ?? Math.round(parsePrice(i.price) * 100)
+  const subtotalCents = items.reduce((sum, i) => sum + unitCents(i) * i.qty, 0)
   // Tax needs a destination, so totals firm up once the state is entered.
   const totals = useMemo(
     () => quote(subtotalCents, form.state || null, settings),
@@ -291,7 +303,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
                   {i.title} × {i.qty}
                   {i.customization ? <em style={{ display: 'block', fontSize: '0.8rem' }}>Engraving: {i.customization}</em> : null}
                 </span>
-                <span>{formatCents(Math.round(parsePrice(i.price) * 100) * i.qty)}</span>
+                <span>{formatCents(unitCents(i) * i.qty)}</span>
               </div>
             ))}
             <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '6px', fontSize: '0.85rem', color: 'var(--muted)' }}>

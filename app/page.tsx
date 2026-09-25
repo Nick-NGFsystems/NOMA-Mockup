@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getNgfContent } from '@/lib/ngf'
-import { PRODUCTS, BUNDLES } from '@/lib/site-data'
+import { BUNDLES } from '@/lib/site-data'
+import { getCatalog } from '@/lib/ngf-products'
 import { getReviewCards } from '@/lib/reviews'
 import { ShopSection } from '@/components/home/ShopSection'
 
@@ -10,10 +11,13 @@ export const metadata: Metadata = {
   description: 'Everyday waterproof jewelry designed to last.',
 }
 
-const BEST_SELLERS = PRODUCTS.slice(0, 6)
-
 export default async function HomePage() {
-  const content = await getNgfContent()
+  const [content, catalog] = await Promise.all([getNgfContent(), getCatalog()])
+  // Best sellers: what NOMA marks "Feature on the home page" in the portal, or
+  // the first six products until anything is. The built-in list keeps its
+  // first six, as before.
+  const featured = catalog.products.filter((p) => p.featured)
+  const bestSellers = (featured.length > 0 ? featured : catalog.products).slice(0, 6)
   // Only real reviews reach visitors; the placeholders stay editor-only (lib/reviews.ts).
   const reviews = getReviewCards(content)
   const reviewsLive = reviews.some((review) => review.live)
@@ -131,10 +135,11 @@ export default async function HomePage() {
 
       {/* ── Unified Shop ── */}
       <ShopSection
-        bestSellers={BEST_SELLERS}
-        products={PRODUCTS}
+        bestSellers={bestSellers}
+        products={catalog.products}
         bundles={BUNDLES}
         content={content}
+        editable={catalog.source === 'built-in'}
       />
 
       {/* ── Reviews ──
