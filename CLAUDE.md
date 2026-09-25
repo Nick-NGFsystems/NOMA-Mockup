@@ -2,6 +2,16 @@
 
 This repo was scaffolded from `ngf-client-starter` and converted from a plain HTML mockup to a full Next.js site. The NGF portal editor at `app.ngfsystems.com` is wired up — every editable element on every page can be managed from the portal without a code change.
 
+## Now — read first, keep current
+
+@NOW.md
+
+`NOW.md` is this project's current state: status, next step, what it waits on, open PRs. Nick works in short, unplanned sessions, so keep it true at every moment:
+
+- Update `NOW.md` in the same commit as any change it describes, and push, so a session that ends without warning loses nothing.
+- Overwrite it; never append. Git history is the log. Keep it under about 15 lines.
+- When Nick says "wrap up", bring `NOW.md` up to date, commit and push.
+
 ## Read this first
 
 The universal foundation for every NGF client website is:
