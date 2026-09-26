@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getNgfContent } from '@/lib/ngf'
-import { PRODUCTS, BUNDLES } from '@/lib/site-data'
+import { BUNDLES } from '@/lib/site-data'
+import { getCatalog, bestSellers } from '@/lib/catalog'
 import { getReviewCards } from '@/lib/reviews'
 import { ShopSection } from '@/components/home/ShopSection'
 
@@ -10,10 +11,8 @@ export const metadata: Metadata = {
   description: 'Everyday waterproof jewelry designed to last.',
 }
 
-const BEST_SELLERS = PRODUCTS.slice(0, 6)
-
 export default async function HomePage() {
-  const content = await getNgfContent()
+  const [content, catalog] = await Promise.all([getNgfContent(), getCatalog()])
   // Only real reviews reach visitors; the placeholders stay editor-only (lib/reviews.ts).
   const reviews = getReviewCards(content)
   const reviewsLive = reviews.some((review) => review.live)
@@ -131,8 +130,8 @@ export default async function HomePage() {
 
       {/* ── Unified Shop ── */}
       <ShopSection
-        bestSellers={BEST_SELLERS}
-        products={PRODUCTS}
+        bestSellers={bestSellers(catalog.products)}
+        products={catalog.products}
         bundles={BUNDLES}
         content={content}
       />

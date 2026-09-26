@@ -42,7 +42,20 @@ export function CartPageClient() {
               >
                 <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-[var(--beige)] shrink-0">
                   {item.image ? (
-                    <Image src={item.image} alt={item.title} fill className="object-cover" sizes="96px" />
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      fill
+                      // Product photos come from the portal now — Vercel Blob
+                      // uploads, or any https address — and the optimizer answers
+                      // 400 for a host missing from next.config's list, so the
+                      // cart showed a broken photo (seen in a production build).
+                      // The shop grid already loaded this same photo, so it is in
+                      // the browser's cache.
+                      unoptimized
+                      className="object-cover"
+                      sizes="96px"
+                    />
                   ) : (
                     <div className="w-full h-full bg-[var(--beige)]" />
                   )}
