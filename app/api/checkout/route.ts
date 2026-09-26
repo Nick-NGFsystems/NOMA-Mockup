@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { resolveCart, type IncomingItem } from '@/lib/checkout'
+import { priceCart, type CartItemIn } from '@/lib/ngf-products'
+import { getCatalog } from '@/lib/catalog'
 import { quote, getStoreSettings } from '@/lib/ngf-store'
 import { createOrder, createPayment, cancelByIdempotencyKey, type Customer } from '@/lib/square-checkout'
 import { reportOrderToNgf, siteDomain, type OrderReportV1 } from '@/lib/ngf-order'
@@ -10,8 +11,10 @@ import { reportOrderToNgf, siteDomain, type OrderReportV1 } from '@/lib/ngf-orde
  * SECURITY MODEL
  *  - Card data never reaches here. The browser tokenizes with Square's hosted
  *    iframes and sends only a single-use `sourceId`.
- *  - Prices are re-derived from the catalog server-side; client-sent prices are
- *    ignored entirely, and anything that cannot be priced exactly is refused.
+ *  - Prices are re-derived server-side from the catalog as it is NOW — the
+ *    portal's Products list once NOMA has it switched on (lib/catalog.ts);
+ *    client-sent prices are ignored entirely, and anything that cannot be
+ *    priced exactly is refused.
  *  - The secret token lives only in server env.
  *
  * THE ORDERING PROBLEM — read before changing the sequence below.
@@ -51,7 +54,7 @@ interface CheckoutBody {
   /** Which submit attempt this is for the same order. Only the PAYMENT key
    *  varies with it — see the key derivation below. */
   attempt?: number
-  items?: IncomingItem[]
+  items?: CartItemIn[]
   customer?: {
     name?: string
     email?: string
@@ -118,7 +121,16 @@ export async function POST(req: Request) {
   if (!line1 || !city || !state || !postalCode) return bad('Please enter your full shipping address.')
 
   // ── A. Authoritative re-pricing ──
-  const resolved = resolveCart(items)
+  // From the catalog as it is NOW: a fresh read, not the page's cached copy,
+  // so a price NOMA just changed is the price charged. If the portal cannot be
+  // reached, the cached copy the shop is showing is used instead — the shopper
+  // saw those prices. If there is neither, no money is taken.
+  let catalog = await getCatalog({ fresh: true })
+  if (!catalog.pricing) catalog = await getCatalog()
+  if (!catalog.pricing) {
+    return bad('Checkout is unavailable for a moment. Please try again in a few minutes.', 503, 'config')
+  }
+  const resolved = priceCart(items, catalog.pricing)
   if (!resolved.ok) return bad(resolved.reason)
 
   // Settings come from the client's portal, not from constants here — NOMA
@@ -139,6 +151,10 @@ export async function POST(req: Request) {
         kind: 'stale',
         error: 'Your total changed. Please review your order and try again.',
         totals: priced,
+        // The price of every line as it stands now, so the browser can put
+        // them in the cart. Without this the cart kept its old prices, sent
+        // the same stale total on every retry, and could never check out.
+        prices: resolved.lines.map((l) => ({ id: l.id, unitCents: l.unitCents })),
       },
       { status: 409 },
     )

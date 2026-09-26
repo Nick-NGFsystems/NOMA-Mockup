@@ -53,7 +53,7 @@ That doc has the full tech-stack rules, NGF editor integration spec, setup check
 | Styling | Tailwind CSS | 4.x |
 | Deployment | Vercel | — |
 
-No database. No auth. Pure content site — all data comes from the NGF portal content API and hardcoded fallbacks in `lib/site-data.ts`.
+No database. No auth. All data comes from the NGF portal — its content API and, since 2026-09-26, its **product catalog** — with hardcoded fallbacks in `lib/site-data.ts`.
 
 ---
 
@@ -66,7 +66,27 @@ No database. No auth. Pure content site — all data comes from the NGF portal c
 | `app/layout.tsx` | Mounts NgfEditBridge, CartProvider, Header, Footer. Calls `getNgfContent()`. |
 | `next.config.ts` | Full security-header baseline in ONE CSP entry (frame-ancestors merged in) with Square's origins allowed + image domain allowlist |
 | `components/CartProvider.tsx` | localStorage cart state shared across components |
-| `lib/site-data.ts` | Hardcoded fallback data for products, bundles, reviews |
+| `lib/ngf-products.ts` | CANONICAL — the portal's product catalog: `getNgfCatalog()` (live / off / unavailable) and `priceCart()`, which checkout charges from. Don't hand-edit; it is meant to be byte-identical on every NGF site that sells. |
+| `lib/catalog.ts` | NOMA's catalog: the portal's list once Products is on, `FALLBACK_PRODUCTS` while it is off; the display mapping and the homepage's Best sellers. |
+| `lib/site-data.ts` | Fallbacks: `FALLBACK_PRODUCTS` (in cents, used only while Products is off), bundles, reviews |
+
+## Products — the portal's Products page, not this repo
+
+Since 2026-09-26 NOMA's products, photos and prices are edited on the portal's **Products** page
+(NGF app, `docs/products.md`), and this site renders that list and charges its prices. Rules:
+
+- **Never hardcode a price.** `/api/checkout` prices from `getCatalog({ fresh: true })` on the
+  server; the browser's cart prices are display copies. Anything that cannot be priced exactly is
+  refused, never guessed.
+- **A product id is permanent** (`sheri-necklace`): cart lines are keyed by it (`<id>` or
+  `<id>-<option label>`). Rename products freely; never change an id.
+- `FALLBACK_PRODUCTS` is used only while Products is **off** for NOMA. Once it is on, the portal's
+  list is the only one, and an empty list is an empty shop. If the portal is unreachable, the
+  fallback is shown but checkout refuses to take money.
+- `docs/ngf-products-import.json` is the fallback list as the portal's **Import** takes it — for
+  switching Products on (runbook in the NGF app's `docs/products.md`).
+- The website editor no longer edits products: the `products.items` and `bestSellers.items`
+  overlays are gone (they let a shown price differ from the charged one).
 
 ---
 
@@ -104,14 +124,12 @@ cp -r assets public/assets
 | `hero.image` | Homepage hero | image |
 | `hero.engravingTagline/Title/Body` | Homepage hero callout | text/textarea |
 | `hero.contactEmail` | Contact CTA href | text |
-| `bestSellers.items.N.*` | Homepage best sellers | group |
 | `reviews.eyebrow/headline` | Homepage reviews | text |
 | `reviews.items.N.*` | Homepage reviews | group |
 | `bundles.eyebrow/headline` | Homepage + products | text |
 | `bundles.items.N.*` | Homepage + products bundles | group |
 | `founder.eyebrow/headline/body/signature/image` | Homepage founder section | text/image |
 | `products.eyebrow/lede` | Products page | text |
-| `products.items.N.*` | Products page grid | group |
 | `engraving.eyebrow/headline/lede` | Products engraving section | text/textarea |
 
 ---
@@ -134,7 +152,7 @@ cp -r assets public/assets
 | Area | Status | Notes |
 |---|---|---|
 | Static assets | ✅ Moved | `public/assets/` holds logos + product photos (30 files). |
-| Checkout | ✅ Built + sandbox-tested | Square Web Payments SDK at `/checkout`; `/api/checkout` re-prices server-side, creates a Square order, charges, then reports to the portal. A real sandbox order reached NOMA's portal. Needs production Square keys to take real money. |
+| Checkout | ✅ Built + sandbox-tested | Square Web Payments SDK at `/checkout`; `/api/checkout` re-prices server-side from the product catalog (see Products above), creates a Square order, charges, then reports to the portal. A real sandbox order reached NOMA's portal. Needs production Square keys to take real money. |
 | `NEXT_PUBLIC_SITE_URL` | ✅ Local / ⚠️ unset in Vercel but working by luck | `noelleandmary.com` in `.env.local`. NOT set in Vercel, yet production content resolves anyway: the `lib/ngf.ts` fallback chain reaches `VERCEL_PROJECT_PRODUCTION_URL`, which on this project happens to be the custom domain and so matches `site_url`. Verified live — production renders the published "Ayana Necklace", not the "Alaina" fallback. Set it explicitly regardless: a Vercel domain change would silently break content with no error. |
 | NGF admin `site_url` | ✅ `noelleandmary.com` | Both apex and `www` resolve to client `cmrkupuik0001…` with 19 published keys. `noma-mockup.vercel.app` resolves to nothing — anything still pointing there is silently broken. |
 | Store settings (shipping/tax) | ❌ Not configured | Nothing set in the portal's Store tab, so `quote()` falls back to zeroes — every order ships free and untaxed. Set before launch. |
@@ -142,5 +160,5 @@ cp -r assets public/assets
 | Test orders | ⚠️ Present | Sandbox test orders sit in NOMA's portal looking like real sales — delete via the admin orders route before handover. Counts have differed between the portal view and a direct DB query, so check the portal itself rather than trusting a remembered number. |
 | Contact email | ⚠️ Placeholder | `hero.contactEmail` defaults to `mailto:hello@noma.com` — update via portal. |
 | Product reviews | ✅ Hidden until real (2026-09-25) | The four reviews in `lib/site-data.ts` are placeholders. They stay in the HTML so the portal editor can fill them in, but a card shows to visitors only once its quote is a real one (`lib/reviews.ts`), and the section and its header/footer "Reviews" links appear with the first real review. "Real" is decided by the text, not by what is published: the editor publishes the whole list with untouched cards backfilled, so placeholder quotes get published too. Keep the placeholder strings in `REVIEWS` unchanged, or the check stops recognising them. |
-| One necklace, two names | ⚠️ Asked NOMA (2026-09-25) | The portal publishes `bestSellers.items.2.name` = "Ayana Necklace", which the home page best-sellers show; the catalog in `lib/site-data.ts` (shop page, product modal, cart, checkout, server-side pricing) says "Alaina Necklace", and so do its photo paths. Both names are live on the site at once. Fix whichever is wrong once NOMA answers. Change only the display `name`: the checkout's server-side pricing matches cart items by the product `id` (`alaina-necklace`), so leave the id alone. |
+| One necklace, two names | ⚠️ Asked NOMA (2026-09-25) | The homepage used to show "Ayana Necklace" (a website-editor override on the best-sellers card) while the shop, cart and checkout said "Alaina Necklace". Since 2026-09-26 the overrides are gone, so the whole site shows the catalog's name: "Alaina" from `FALLBACK_PRODUCTS` until Products is on, then whatever NOMA sets on the portal's Products page — the one place to settle it. Keep the id `alaina-necklace` either way. |
 | Next.js | ✅ 16.3.6 (2026-09-25) | Was 16.1.6, inside CVE-2026-44575 (a middleware/proxy bypass). This site has no middleware, so it was not exploitable here, but upstream no longer patches 16.1.x. Storefront walked in Chromium before and after the bump (pages, product modal, add to cart, engraving cap, cart, checkout page, 404): identical. |
