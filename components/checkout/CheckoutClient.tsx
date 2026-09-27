@@ -77,7 +77,7 @@ function newOrderRef() {
 }
 
 export function CheckoutClient({ settings }: { settings: StoreSettings }) {
-  const { items, clearCart } = useCart()
+  const { items, clearCart, repriceItems } = useCart()
   const [status, setStatus] = useState<Status>('loading')
   const [message, setMessage] = useState<string>('')
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null)
@@ -213,6 +213,17 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
         }),
       })
       const data = await res.json()
+
+      // A price changed since these items went in the cart. Nothing was
+      // ordered or charged: the server checks the total before anything else.
+      // Take the new prices into the cart so the total on screen is the one
+      // that will be charged, and let the shopper look before paying again.
+      if (res.status === 409 && data.kind === 'stale' && Array.isArray(data.prices)) {
+        repriceItems(data.prices)
+        setStatus('ready')
+        setMessage('Some prices have changed since you added these items. Check your new total, then pay.')
+        return
+      }
 
       if (!res.ok || !data.ok) {
         // 'unknown_charge' is the one case where retrying is dangerous, so the

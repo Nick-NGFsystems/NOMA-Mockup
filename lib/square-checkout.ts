@@ -1,4 +1,4 @@
-import type { CheckoutLine } from '@/lib/checkout'
+import type { PricedLine as CheckoutLine } from '@/lib/ngf-products'
 
 /**
  * Square Orders + Payments.

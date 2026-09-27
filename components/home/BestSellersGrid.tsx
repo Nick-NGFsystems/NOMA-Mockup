@@ -2,12 +2,10 @@
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product, ProductVariant } from '@/lib/site-data'
-import type { NgfSiteContent } from '@/lib/ngf'
-import { getItems } from '@/lib/ngf'
 
 interface BestSellersGridProps {
+  /** lib/catalog.ts bestSellers(): the products NOMA features in the portal, or the first six. */
   products: Product[]
-  content: NgfSiteContent
 }
 
 interface ModalState {
@@ -21,19 +19,21 @@ interface ModalState {
   variantType?: string
 }
 
-export function BestSellersGrid({ products, content }: BestSellersGridProps) {
+// Every field comes from the catalog. This grid used to be a website-editor
+// group (bestSellers.items) laid over the products by position, so a card could
+// carry a name or price the product itself did not have — "Ayana" here while the
+// shop said "Alaina", a price shown that checkout never charged. Products are
+// edited on the portal's Products page now, the same list checkout charges from.
+export function BestSellersGrid({ products }: BestSellersGridProps) {
   const [modal, setModal] = useState<ModalState | null>(null)
 
-  const contentItems = getItems(content, 'bestSellers.items')
-
-  const openModal = (product: Product, idx: number) => {
-    const ci = contentItems[idx] ?? {}
+  const openModal = (product: Product) => {
     setModal({
       productId: product.id,
-      name: ci.name || product.name,
-      description: ci.description || product.description,
-      price: ci.price || product.price,
-      image: ci.image || product.image,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      image: product.image,
       images: product.images,
       variants: product.variants,
       variantType: product.variantType,
@@ -43,28 +43,15 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
   return (
     <>
       {/* ── Mini-grid ── */}
-      <div
-        className="best-sellers-grid"
-        data-ngf-group="bestSellers.items"
-        data-ngf-item-label="Product"
-        data-ngf-min-items="1"
-        data-ngf-max-items="12"
-        data-ngf-item-fields='[{"key":"image","label":"Product Image","type":"image"},{"key":"badge","label":"Badge Text","type":"text"},{"key":"name","label":"Product Name","type":"text"},{"key":"description","label":"Description","type":"textarea"},{"key":"price","label":"Price","type":"text"}]'
-      >
+      <div className="best-sellers-grid">
         {products.map((product, i) => {
-          const ci = contentItems[i] ?? {}
-          const name = ci.name || product.name
-          const description = ci.description || product.description
-          const price = ci.price || product.price
-          const comparePrice = product.comparePrice
-          const badge = ci.badge || product.badge
-          const image = ci.image || product.image
+          const { name, description, price, comparePrice, badge, image } = product
 
           return (
             <button
               key={product.id}
               className="mini-card"
-              onClick={() => openModal(product, i)}
+              onClick={() => openModal(product)}
               style={{ border: 'none', fontFamily: 'inherit' }}
             >
               <div className="mini-image">
@@ -73,10 +60,6 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   alt={name}
                   loading={i < 2 ? 'eager' : 'lazy'}
                   decoding="async"
-                  data-ngf-field={`bestSellers.items.${i}.image`}
-                  data-ngf-label="Product Image"
-                  data-ngf-type="image"
-                  data-ngf-section="Best Sellers"
                 />
               </div>
               <div className="mini-body">
@@ -84,30 +67,14 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   <p
                     className="eyebrow"
                     style={{ fontSize: '0.85rem', letterSpacing: '0.12em', marginBottom: '2px' }}
-                    data-ngf-field={`bestSellers.items.${i}.badge`}
-                    data-ngf-label="Badge Text"
-                    data-ngf-type="text"
-                    data-ngf-section="Best Sellers"
                   >
                     {badge}
                   </p>
                 )}
-                <h3
-                  style={{ fontSize: '1.2rem', margin: 0 }}
-                  data-ngf-field={`bestSellers.items.${i}.name`}
-                  data-ngf-label="Product Name"
-                  data-ngf-type="text"
-                  data-ngf-section="Best Sellers"
-                >
+                <h3 style={{ fontSize: '1.2rem', margin: 0 }}>
                   {name}
                 </h3>
-                <p
-                  style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)' }}
-                  data-ngf-field={`bestSellers.items.${i}.description`}
-                  data-ngf-label="Description"
-                  data-ngf-type="textarea"
-                  data-ngf-section="Best Sellers"
-                >
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)' }}>
                   {description.length > 72
                     ? description.slice(0, description.lastIndexOf(' ', 72)) + '…'
                     : description}
@@ -124,13 +91,7 @@ export function BestSellersGrid({ products, content }: BestSellersGridProps) {
                   </div>
                 ) : (
                   <div className="price-row">
-                    <span
-                      className="price"
-                      data-ngf-field={`bestSellers.items.${i}.price`}
-                      data-ngf-label="Price"
-                      data-ngf-type="text"
-                      data-ngf-section="Best Sellers"
-                    >
+                    <span className="price">
                       {price}
                     </span>
                     {comparePrice && <span className="price-compare">{comparePrice}</span>}

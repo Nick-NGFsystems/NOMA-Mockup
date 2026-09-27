@@ -1,0 +1,186 @@
+{
+  "products": [
+    {
+      "slug": "sheri-necklace",
+      "name": "Sheri Necklace",
+      "description": "Our effortlessly elegant stack starter, made magnetic! The Sheri Necklace features a sleek, modern silhouette and our signature magnetic ball closure—making it as functional as it is stylish. Perfect on its own, layered, or as a base for your next charm necklace!",
+      "category": "Necklaces",
+      "price_cents": null,
+      "option_label": "Length",
+      "options": [
+        {
+          "label": "16\"",
+          "price_cents": 3900
+        },
+        {
+          "label": "18\"",
+          "price_cents": 4400
+        },
+        {
+          "label": "20\"",
+          "price_cents": 4900
+        }
+      ],
+      "images": [
+        "https://www.noelleandmary.com/assets/products/Necklace/Sheri/SHERI%20NECKLACE.jpg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Sheri/SHERI%20NECKLACE2.jpg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Sheri/SHERI%20NECKLACE3.jpg"
+      ],
+      "personalizable": false,
+      "tags": [
+        "Gold"
+      ],
+      "badge": null,
+      "visible": true,
+      "featured": false
+    },
+    {
+      "slug": "amie-necklace",
+      "name": "Amie Necklace",
+      "description": "The Amie Necklace is the perfect everyday piece—simple, stylish, and easy to wear. Designed with a sleek gold finish and our signature magnetic heart clasp, it's made to elevate your stack with effortless charm.",
+      "category": "Necklaces",
+      "price_cents": null,
+      "option_label": "Length",
+      "options": [
+        {
+          "label": "16\"",
+          "price_cents": 3900
+        },
+        {
+          "label": "18\"",
+          "price_cents": 4400
+        },
+        {
+          "label": "20\"",
+          "price_cents": 4900
+        }
+      ],
+      "images": [
+        "https://www.noelleandmary.com/assets/products/Necklace/Amie/AMIE%20NECKLACE%201.jpeg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Amie/AMIE%20NECKLACE%202.jpeg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Amie/AMIE%20NECKLACE%203.jpeg"
+      ],
+      "personalizable": false,
+      "tags": [
+        "Gold"
+      ],
+      "badge": null,
+      "visible": true,
+      "featured": false
+    },
+    {
+      "slug": "alaina-necklace",
+      "name": "Alaina Necklace",
+      "description": "Meet Alaina — our customizable, everyday gold herringbone necklace. Whether you're layering it with your favorites or letting it shine on its own, the Alaina is perfect for daily wear & stack starting.",
+      "category": "Necklaces",
+      "price_cents": null,
+      "option_label": "Style",
+      "options": [
+        {
+          "label": "Blank",
+          "price_cents": 4900
+        },
+        {
+          "label": "Engraved",
+          "price_cents": 5400
+        }
+      ],
+      "images": [
+        "https://www.noelleandmary.com/assets/products/Necklace/Alaina/ALAINA%20NECKLACE.jpg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Alaina/ALAINA%20NECKLACE%202.jpg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Alaina/ALAINA%20NECKLACE%203.jpg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Alaina/ALAINA%20NECKLACE%204.jpg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Alaina/ALAINA%20NECKLACE%205.jpg"
+      ],
+      "personalizable": true,
+      "tags": [
+        "Gold"
+      ],
+      "badge": null,
+      "visible": true,
+      "featured": false
+    },
+    {
+      "slug": "mary-turquoise-drop-necklace",
+      "name": "Mary Turquoise Drop Necklace",
+      "description": "The Mary Turquoise Drop Necklace features bright, show-stopping turquoise beads spaced along a radiant 18k gold plated chain for a timeless, effortless look. Lightweight and elegant, it's a perfect statement piece with a touch of grace and color.",
+      "category": "Necklaces",
+      "price_cents": 7900,
+      "option_label": null,
+      "options": [],
+      "images": [
+        "https://www.noelleandmary.com/assets/products/Necklace/Mary/MARY%20NECKLACE.jpeg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Mary/MARY%20NECKLACE2.jpeg",
+        "https://www.noelleandmary.com/assets/products/Necklace/Mary/MARY%20NECKLACE3.jpeg"
+      ],
+      "personalizable": false,
+      "tags": [
+        "Gold"
+      ],
+      "badge": null,
+      "visible": true,
+      "featured": false
+    },
+    {
+      "slug": "paris-bracelet",
+      "name": "Paris Bracelet",
+      "description": "Your new favorite carabiner-clasp bracelet, fully customizable!",
+      "category": "Bracelets",
+      "price_cents": null,
+      "option_label": "Style",
+      "options": [
+        {
+          "label": "Blank",
+          "price_cents": 5400
+        },
+        {
+          "label": "Engraved",
+          "price_cents": 5900
+        }
+      ],
+      "images": [
+        "https://www.noelleandmary.com/assets/products/Bracelet/Paris/PARIS%20BRACELET.jpg",
+        "https://www.noelleandmary.com/assets/products/Bracelet/Paris/PARIS%20BRACELET%202.jpg",
+        "https://www.noelleandmary.com/assets/products/Bracelet/Paris/PARIS%20BRACELET%203.jpg",
+        "https://www.noelleandmary.com/assets/products/Bracelet/Paris/PARIS%20BRACELET%204.jpg",
+        "https://www.noelleandmary.com/assets/products/Bracelet/Paris/PARIS%20BRACELET%205.jpg"
+      ],
+      "personalizable": true,
+      "tags": [
+        "Gold"
+      ],
+      "badge": null,
+      "visible": true,
+      "featured": false
+    },
+    {
+      "slug": "proverbs-herringbone-bracelet",
+      "name": "Proverbs Herringbone Bracelet",
+      "description": "The Proverbs Herringbone Bracelet is a timeless statement of faith and elegance. Crafted with radiant 18k gold plating and designed for everyday wear, this sleek piece serves as a beautiful reminder to walk in wisdom, strength, and grace inspired by Scripture.",
+      "category": "Bracelets",
+      "price_cents": null,
+      "option_label": "Size",
+      "options": [
+        {
+          "label": "6.5\"",
+          "price_cents": 3800
+        },
+        {
+          "label": "7\"",
+          "price_cents": 4200
+        }
+      ],
+      "images": [
+        "https://www.noelleandmary.com/assets/products/Bracelet/Proverbs%20Herringbone/PROVERBS%20HERRINGBONE%20BRACELET.jpg",
+        "https://www.noelleandmary.com/assets/products/Bracelet/Proverbs%20Herringbone/PROVERBS%20HERRINGBONE%20BRACELET1.jpg"
+      ],
+      "personalizable": false,
+      "tags": [
+        "Gold"
+      ],
+      "badge": null,
+      "visible": true,
+      "featured": false
+    }
+  ]
+}

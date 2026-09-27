@@ -22,6 +22,8 @@ interface CartContextValue {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'qty'>) => void
   updateQty: (id: string, delta: number) => void
+  /** Take the server's current prices into the cart (checkout's "your total changed" answer). */
+  repriceItems: (prices: { id: string; unitCents: number }[]) => void
   /** Empty the cart. Call ONLY after a payment is confirmed settled. */
   clearCart: () => void
   totalQty: number
@@ -31,6 +33,7 @@ const CartContext = createContext<CartContextValue>({
   items: [],
   addItem: () => {},
   updateQty: () => {},
+  repriceItems: () => {},
   clearCart: () => {},
   totalQty: 0,
 })
@@ -97,6 +100,32 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   /**
+   * NOMA sets prices in the portal now, so a price can change while an item
+   * sits in someone's cart. The cart's copy is display-only (checkout re-prices
+   * on the server and refuses a total the shopper was not shown), but the
+   * DISPLAY must still catch up, or every retry would send the same stale total
+   * and be refused forever. Only lines the server priced are touched.
+   */
+  const repriceItems = useCallback((prices: { id: string; unitCents: number }[]) => {
+    const byId = new Map(
+      prices
+        .filter((p) => p && typeof p.id === 'string' && Number.isInteger(p.unitCents) && p.unitCents > 0)
+        .map((p) => [p.id, p.unitCents] as const),
+    )
+    setItems((prev) => {
+      const next = prev.map((i) => {
+        const cents = byId.get(i.id)
+        if (cents === undefined) return i
+        const dollars = cents / 100
+        const price = Number.isInteger(dollars) ? `$${dollars}` : `$${dollars.toFixed(2)}`
+        return { ...i, price }
+      })
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }, [])
+
+  /**
    * There was no way to empty the cart at all, which meant a paid order left
    * its items sitting in localStorage — the buyer could refresh the success
    * screen, land back on a full cart, and pay for the same jewelry twice.
@@ -112,7 +141,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const totalQty = items.reduce((sum, i) => sum + i.qty, 0)
 
   return (
-    <CartContext.Provider value={{ items, addItem, updateQty, clearCart, totalQty }}>
+    <CartContext.Provider value={{ items, addItem, updateQty, repriceItems, clearCart, totalQty }}>
       {children}
     </CartContext.Provider>
   )

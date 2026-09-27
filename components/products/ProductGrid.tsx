@@ -2,15 +2,13 @@
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product } from '@/lib/site-data'
-import type { NgfSiteContent } from '@/lib/ngf'
-import { getItems, getGallery } from '@/lib/ngf'
 
 const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
 const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings', 'Engravable']
 
 interface ProductGridProps {
+  /** From lib/catalog.ts: NOMA's Products list in the portal, or the compiled fallback. */
   products: Product[]
-  content: NgfSiteContent
   initialMetals?: string[]
   initialTypes?: string[]
 }
@@ -22,13 +20,14 @@ function parsePrice(p: string) {
 }
 
 // ── Per-card component — owns modal state ─────────────────────────────────────
-function ProductCard({ product, index, gallery }: {
+// Every field here comes from the catalog. The website editor used to be laid
+// over these cards by position (products.items.N), which let a price be changed
+// on screen while checkout charged another, and pointed at the wrong card as
+// soon as the grid was sorted or filtered. Products are edited on the portal's
+// Products page now, which is also what checkout charges from.
+function ProductCard({ product, index }: {
   product: Product
   index: number
-  /** Published extra photos, falling back to the hardcoded set. Used for BOTH
-      the editor-only annotated container and the modal's thumbnail strip, so
-      what the client publishes is what customers actually see. */
-  gallery: string[]
 }) {
   const [modalOpen, setModalOpen] = useState(false)
 
@@ -45,35 +44,7 @@ function ProductCard({ product, index, gallery }: {
             alt={product.name}
             loading={index < 4 ? 'eager' : 'lazy'}
             decoding="async"
-            data-ngf-field={`products.items.${index}.image`}
-            data-ngf-label="Product Image"
-            data-ngf-type="image"
-            data-ngf-section="Products"
           />
-        </div>
-
-        {/* Extra product photos — the ones the modal's thumbnail strip shows.
-            The modal is conditionally rendered, so the portal's scraper (which
-            reads the server-rendered HTML once) can never see anything inside
-            it. The container therefore lives here, in the always-rendered card.
-            It IS emitted on every request so the scraper finds it, and is hidden
-            from real visitors by CSS that only lifts inside the editor
-            (html[data-ngf-edit="true"]) — the storefront is unchanged.
-            One direct child per photo with the <img> as a descendant: the bridge
-            locates items with child.querySelector() and clones the last child
-            when adding. */}
-        <div
-          className="ngf-editor-only-gallery"
-          data-ngf-field={`products.items.${index}.gallery`}
-          data-ngf-label="Extra Photos"
-          data-ngf-type="gallery"
-          data-ngf-section="Products"
-        >
-          {gallery.map((src, n) => (
-            <div key={n}>
-              <img src={src} alt="" loading="lazy" decoding="async" />
-            </div>
-          ))}
         </div>
 
         <div className="mini-body">
@@ -85,13 +56,7 @@ function ProductCard({ product, index, gallery }: {
               {product.badge}
             </p>
           )}
-          <h3
-            style={{ fontSize: '1.2rem', margin: 0 }}
-            data-ngf-field={`products.items.${index}.name`}
-            data-ngf-label="Product Name"
-            data-ngf-type="text"
-            data-ngf-section="Products"
-          >
+          <h3 style={{ fontSize: '1.2rem', margin: 0 }}>
             {product.name}
           </h3>
           <p className="product-card-desc" style={{ margin: 0, fontSize: '0.85rem', color: 'var(--muted)' }}>
@@ -121,13 +86,7 @@ function ProductCard({ product, index, gallery }: {
             </div>
           ) : (
             <div className="price-row">
-              <span
-                className="price"
-                data-ngf-field={`products.items.${index}.price`}
-                data-ngf-label="Price"
-                data-ngf-type="text"
-                data-ngf-section="Products"
-              >
+              <span className="price">
                 {product.price}
               </span>
               {product.comparePrice && (
@@ -148,7 +107,7 @@ function ProductCard({ product, index, gallery }: {
           description={product.description}
           price={product.price}
           image={product.image}
-          images={gallery.length > 0 ? gallery : product.images}
+          images={product.images}
           variants={product.variants}
           variantType={product.variantType}
           onClose={() => setModalOpen(false)}
@@ -159,24 +118,11 @@ function ProductCard({ product, index, gallery }: {
 }
 
 // ── Main grid component ───────────────────────────────────────────────────────
-export function ProductGrid({ products, content, initialMetals = [], initialTypes = [] }: ProductGridProps) {
+export function ProductGrid({ products, initialMetals = [], initialTypes = [] }: ProductGridProps) {
   const [activeMetals, setActiveMetals] = useState<Set<string>>(new Set(initialMetals))
   const [activeTypes,  setActiveTypes]  = useState<Set<string>>(new Set(initialTypes))
   const [sort,  setSort]  = useState<SortKey>('featured')
   const [filtersOpen, setFiltersOpen] = useState(initialMetals.length > 0 || initialTypes.length > 0)
-
-  const contentItems = getItems(content, 'products.items')
-
-  const enriched = products.map((p, i) => {
-    const ci = contentItems[i] ?? {}
-    return {
-      ...p,
-      name:        ci.name        || p.name,
-      description: ci.description || p.description,
-      price:       ci.price       || p.price,
-      image:       ci.image       || p.image,
-    }
-  })
 
   const toggleMetal = (m: string) =>
     setActiveMetals((prev) => { const n = new Set(prev); n.has(m) ? n.delete(m) : n.add(m); return n })
@@ -184,7 +130,7 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
   const toggleType = (t: string) =>
     setActiveTypes((prev) => { const n = new Set(prev); n.has(t) ? n.delete(t) : n.add(t); return n })
 
-  const filtered = enriched.filter((p) => {
+  const filtered = products.filter((p) => {
     const metalMatch = activeMetals.size === 0 || [...activeMetals].some((m) =>
       p.metals?.some((metal) => metal.toLowerCase() === m.toLowerCase())
     )
@@ -349,26 +295,18 @@ export function ProductGrid({ products, content, initialMetals = [], initialType
       </div>
 
       {/* ── Product grid ── */}
-      <div
-        className="product-grid"
-        data-ngf-group="products.items"
-        data-ngf-item-label="Product"
-        data-ngf-min-items="1"
-        data-ngf-max-items="24"
-        data-ngf-item-fields='[{"key":"image","label":"Product Image","type":"image"},{"key":"name","label":"Product Name","type":"text"},{"key":"category","label":"Category","type":"text"},{"key":"price","label":"Price","type":"text"},{"key":"description","label":"Description","type":"textarea"}]'
-      >
+      <div className="product-grid">
         {sorted.map((product, i) => (
           <ProductCard
             key={product.id}
             product={product}
             index={i}
-            gallery={getGallery(content, `products.items.${i}.gallery`, product.images ?? [])}
           />
         ))}
 
         {sorted.length === 0 && (
           <p style={{ gridColumn: '1 / -1', textAlign: 'center', color: 'var(--muted)', padding: '48px 0' }}>
-            No products match your filters.
+            {products.length === 0 ? 'New pieces are on their way. Check back soon.' : 'No products match your filters.'}
           </p>
         )}
       </div>

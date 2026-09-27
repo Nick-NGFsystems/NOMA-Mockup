@@ -79,7 +79,13 @@ export function ShopSection({ bestSellers, products, bundles, content }: ShopSec
         `}</style>
 
         {activeTab === 'bestsellers' && (
-          <BestSellersGrid products={bestSellers} content={content} />
+          bestSellers.length > 0 ? (
+            <BestSellersGrid products={bestSellers} />
+          ) : (
+            <p style={{ textAlign: 'center', color: 'var(--muted)', padding: '32px 0' }}>
+              New pieces are on their way. Check back soon.
+            </p>
+          )
         )}
 
         {activeTab === 'bundles' && (
