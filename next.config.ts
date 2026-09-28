@@ -30,7 +30,10 @@ const nextConfig: NextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://web.squarecdn.com https://sandbox.web.squarecdn.com https://js.squareup.com https://js.squareupsandbox.com",
               "style-src 'self' 'unsafe-inline' https://web.squarecdn.com https://sandbox.web.squarecdn.com",
               "img-src 'self' data: blob: https:",
-              "font-src 'self' data: https://square-fonts-production-f.squarecdn.com https://web.squarecdn.com https://sandbox.web.squarecdn.com",
+              // Square's SDK also loads its sqmarket and Cash Sans fonts into the
+              // checkout page itself, from the last two hosts; without them every
+              // checkout load logs four CSP blocks (seen 2026-09-28).
+              "font-src 'self' data: https://square-fonts-production-f.squarecdn.com https://web.squarecdn.com https://sandbox.web.squarecdn.com https://d1g145x70srn7h.cloudfront.net https://cash-f.squarecdn.com",
               "connect-src 'self' https://connect.squareup.com https://connect.squareupsandbox.com https://pci-connect.squareup.com https://pci-connect.squareupsandbox.com https://web.squarecdn.com https://sandbox.web.squarecdn.com https://o160250.ingest.sentry.io https://app.ngfsystems.com",
               "frame-src 'self' https://web.squarecdn.com https://sandbox.web.squarecdn.com https://connect.squareup.com https://connect.squareupsandbox.com",
               "object-src 'none'",
