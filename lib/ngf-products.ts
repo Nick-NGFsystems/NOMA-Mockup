@@ -24,6 +24,8 @@ import { ngfEndpoints } from '@/lib/ngf'
 export interface NgfProductOption {
   label: string
   priceCents: number
+  /** The original price for a sale, shown crossed out. Never charged. Null when not on sale. */
+  compareAtCents: number | null
 }
 
 export interface NgfProduct {
@@ -34,6 +36,8 @@ export interface NgfProduct {
   category: string | null
   /** Null when `options` carries the prices. */
   priceCents: number | null
+  /** The original price for a sale, shown crossed out. Never charged. Null when not on sale or with options. */
+  compareAtCents: number | null
   /** What the options are called, e.g. "Length". Null without options. */
   optionLabel: string | null
   options: NgfProductOption[]
@@ -55,6 +59,10 @@ const TIMEOUT_MS = 8000
 
 const isPositiveInt = (n: unknown): n is number => typeof n === 'number' && Number.isInteger(n) && n > 0
 
+/** An original price worth showing: a whole number of cents above the price. Anything else is no sale. */
+const saleCompare = (compareAt: unknown, price: number | null): number | null =>
+  isPositiveInt(compareAt) && price !== null && compareAt > price ? compareAt : null
+
 const strings = (value: unknown): string[] =>
   Array.isArray(value) ? value.filter((s): s is string => typeof s === 'string' && s !== '') : []
 
@@ -69,7 +77,7 @@ function readProduct(raw: unknown): NgfProduct | null {
     for (const entry of p.options) {
       const o = entry as Record<string, unknown> | null
       if (o && typeof o.label === 'string' && o.label !== '' && isPositiveInt(o.priceCents)) {
-        options.push({ label: o.label, priceCents: o.priceCents })
+        options.push({ label: o.label, priceCents: o.priceCents, compareAtCents: saleCompare(o.compareAtCents, o.priceCents) })
       }
     }
   }
@@ -82,6 +90,7 @@ function readProduct(raw: unknown): NgfProduct | null {
     description: typeof p.description === 'string' ? p.description : '',
     category: typeof p.category === 'string' && p.category !== '' ? p.category : null,
     priceCents: options.length > 0 ? null : priceCents,
+    compareAtCents: options.length > 0 ? null : saleCompare(p.compareAtCents, priceCents),
     optionLabel:
       options.length > 0 && typeof p.optionLabel === 'string' && p.optionLabel !== '' ? p.optionLabel : null,
     options,

@@ -8,6 +8,8 @@ interface ProductModalProps {
   name: string
   description: string
   price: string
+  /** The original price, crossed out beside the price, for a sale. Options carry their own. */
+  comparePrice?: string
   image: string
   images?: string[]
   variants?: ProductVariant[]
@@ -17,7 +19,7 @@ interface ProductModalProps {
 }
 
 export function ProductModal({
-  productId, name, description, price, image, images,
+  productId, name, description, price, comparePrice, image, images,
   variants, variantType = 'Size', imageOnly = false, onClose,
 }: ProductModalProps) {
   const { addItem } = useCart()
@@ -37,6 +39,7 @@ export function ProductModal({
   const hasVariants = variants && variants.length > 0
   const [selectedVariant, setSelectedVariant] = useState(0)
   const currentPrice = hasVariants ? variants![selectedVariant].price : price
+  const currentCompare = hasVariants ? variants![selectedVariant].comparePrice : comparePrice
 
   const [descOpen, setDescOpen] = useState(false)
   const [added, setAdded] = useState(false)
@@ -315,6 +318,7 @@ export function ProductModal({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
               <span className="pm-price">{currentPrice}</span>
+              {currentCompare && <span className="price-compare">{currentCompare}</span>}
               <button className="pm-add-btn" onClick={handleAddToCart}
                 style={{
                   background: added

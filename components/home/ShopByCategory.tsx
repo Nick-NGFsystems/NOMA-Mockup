@@ -11,6 +11,7 @@ interface ModalState {
   name: string
   description: string
   price: string
+  comparePrice?: string
   image: string
   images?: string[]
   variants?: ProductVariant[]
@@ -182,7 +183,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
               {filtered.slice(0, 4).map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: product.price, image: product.image, images: product.images, variants: product.variants, variantType: product.variantType })}
+                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: product.price, comparePrice: product.comparePrice, image: product.image, images: product.images, variants: product.variants, variantType: product.variantType })}
                   style={{
                     border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
                     background: '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
@@ -197,7 +198,12 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
                   </div>
                   <div style={{ padding: '10px 12px 12px' }}>
                     <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.name}</p>
-                    <p style={{ fontSize: '0.82rem', color: 'var(--accent)', fontWeight: 700, margin: '2px 0 0' }}>{product.price}</p>
+                    <p style={{ fontSize: '0.82rem', color: 'var(--accent)', fontWeight: 700, margin: '2px 0 0' }}>
+                      {product.price}
+                      {product.comparePrice && (
+                        <span className="price-compare" style={{ fontSize: '0.78rem', fontWeight: 400, marginLeft: '6px' }}>{product.comparePrice}</span>
+                      )}
+                    </p>
                   </div>
                 </button>
               ))}
@@ -209,7 +215,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
       {modal && (
         <ProductModal
           productId={modal.productId} name={modal.name} description={modal.description}
-          price={modal.price} image={modal.image} images={modal.images}
+          price={modal.price} comparePrice={modal.comparePrice} image={modal.image} images={modal.images}
           variants={modal.variants} variantType={modal.variantType}
           onClose={() => setModal(null)}
         />

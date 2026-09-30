@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product, ProductVariant } from '@/lib/site-data'
+import { showsSaleTag } from '@/lib/sale'
 
 interface BestSellersGridProps {
   /** lib/catalog.ts bestSellers(): the products NOMA features in the portal, or the first six. */
@@ -13,6 +14,7 @@ interface ModalState {
   name: string
   description: string
   price: string
+  comparePrice?: string
   image: string
   images?: string[]
   variants?: ProductVariant[]
@@ -33,6 +35,7 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
       name: product.name,
       description: product.description,
       price: product.price,
+      comparePrice: product.comparePrice,
       image: product.image,
       images: product.images,
       variants: product.variants,
@@ -85,6 +88,9 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
                       {product.variants[0].price}
                       <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: '0.9rem' }}> – {product.variants[product.variants.length - 1].price}</span>
                     </span>
+                    {showsSaleTag(product) && (
+                      <span className="sale-tag" style={{ marginLeft: '8px', verticalAlign: 'middle' }}>Sale</span>
+                    )}
                     <p style={{ fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '3px 0 0', fontWeight: 600 }}>
                       {product.variantType === 'Length' ? `${product.variants.length} lengths` : product.variantType === 'Style' ? 'blank or engraved' : `${product.variants.length} sizes`}
                     </p>
@@ -95,7 +101,7 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
                       {price}
                     </span>
                     {comparePrice && <span className="price-compare">{comparePrice}</span>}
-                    {product.badge === 'Sale' || (product.comparePrice && product.comparePrice !== price) ? (
+                    {showsSaleTag(product) ? (
                       <span className="sale-tag">Sale</span>
                     ) : null}
                   </div>
@@ -113,6 +119,7 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
           name={modal.name}
           description={modal.description}
           price={modal.price}
+          comparePrice={modal.comparePrice}
           image={modal.image}
           images={modal.images}
           variants={modal.variants}

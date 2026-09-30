@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product } from '@/lib/site-data'
+import { showsSaleTag } from '@/lib/sale'
 
 const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
 const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings', 'Engravable']
@@ -73,6 +74,11 @@ function ProductCard({ product, index }: {
                   {' – '}{product.variants[product.variants.length - 1].price}
                 </span>
               </span>
+              {/* A range has no single "was" price to cross out; the popup shows
+                  each option's. The tag still says one is on sale. */}
+              {showsSaleTag(product) && (
+                <span className="sale-tag" style={{ marginLeft: '8px', verticalAlign: 'middle' }}>Sale</span>
+              )}
               <p style={{
                 fontSize: '0.68rem', color: 'var(--muted)', letterSpacing: '0.08em',
                 textTransform: 'uppercase', margin: '3px 0 0', fontWeight: 600,
@@ -92,7 +98,7 @@ function ProductCard({ product, index }: {
               {product.comparePrice && (
                 <span className="price-compare">{product.comparePrice}</span>
               )}
-              {(product.badge === 'Sale' || (product.comparePrice && product.comparePrice !== product.price)) && (
+              {showsSaleTag(product) && (
                 <span className="sale-tag">Sale</span>
               )}
             </div>
@@ -106,6 +112,7 @@ function ProductCard({ product, index }: {
           name={product.name}
           description={product.description}
           price={product.price}
+          comparePrice={product.comparePrice}
           image={product.image}
           images={product.images}
           variants={product.variants}
