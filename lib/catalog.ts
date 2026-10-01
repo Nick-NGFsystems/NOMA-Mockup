@@ -42,19 +42,31 @@ const NO_PHOTO = '/assets/ring-placeholder.svg'
 /** The catalog's shape → the strings the product components render. */
 export function toDisplay(p: NgfProduct): Product {
   const hasOptions = p.options.length > 0
-  const low = hasOptions ? Math.min(...p.options.map((o) => o.priceCents)) : (p.priceCents ?? 0)
+  // The card shows the cheapest option ("From $39"); its crossed-out original
+  // price, if any, goes beside it. A tie keeps the first option listed.
+  const cheapest = hasOptions ? p.options.reduce((a, b) => (b.priceCents < a.priceCents ? b : a)) : null
+  const low = cheapest ? cheapest.priceCents : (p.priceCents ?? 0)
+  const lowCompare = cheapest ? cheapest.compareAtCents : p.compareAtCents
   return {
     id: p.id,
     name: p.name,
     category: p.category ?? '',
     price: hasOptions && p.options.length > 1 ? `From ${displayPrice(low)}` : displayPrice(low),
+    comparePrice: lowCompare !== null ? displayPrice(lowCompare) : undefined,
+    onSale: hasOptions ? p.options.some((o) => o.compareAtCents !== null) : p.compareAtCents !== null,
     badge: p.badge ?? undefined,
     description: p.description,
     image: p.images[0] ?? NO_PHOTO,
     images: p.images.length > 0 ? p.images : [NO_PHOTO],
     customizable: p.personalizable,
     metals: p.tags,
-    variants: hasOptions ? p.options.map((o) => ({ size: o.label, price: displayPrice(o.priceCents) })) : undefined,
+    variants: hasOptions
+      ? p.options.map((o) => ({
+          size: o.label,
+          price: displayPrice(o.priceCents),
+          comparePrice: o.compareAtCents !== null ? displayPrice(o.compareAtCents) : undefined,
+        }))
+      : undefined,
     variantType: p.optionLabel ?? undefined,
     featured: p.featured,
   }

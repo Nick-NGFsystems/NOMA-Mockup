@@ -87,6 +87,14 @@ Since 2026-09-26 NOMA's products, photos and prices are edited on the portal's *
   switching Products on (runbook in the NGF app's `docs/products.md`).
 - The website editor no longer edits products: the `products.items` and `bestSellers.items`
   overlays are gone (they let a shown price differ from the charged one).
+- **Sales** (2026-09-30): a product or option can carry an original price in the portal
+  (`compareAtCents`), shown crossed out beside the price on the cards and in the product popup
+  (per option). Display only — checkout never reads it. A range-priced card (several options)
+  shows the Sale tag instead of a crossed-out range. The tag also shows when the badge is "Sale"
+  or "On sale" in any capitalisation (`lib/sale.ts`).
+- **Shipping** is priced by the portal's Store settings through the canonical `lib/ngf-store.ts`
+  (synced from `ngf-client-starter`; never hand-edit): free shipping over an amount, then price
+  bands ("orders under $X ship for $Y"), then the flat charge.
 
 ---
 

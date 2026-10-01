@@ -8,6 +8,8 @@ import type { NgfProduct } from '@/lib/ngf-products'
 export interface ProductVariant {
   size: string   // e.g. '16"', '18"', '6"', '7"'
   price: string  // e.g. '$39'
+  /** The original price, crossed out, when this option is on sale. */
+  comparePrice?: string
 }
 
 export interface Product {
@@ -15,7 +17,10 @@ export interface Product {
   name: string
   category: string
   price: string
+  /** The original price, crossed out beside `price`, when the product (its cheapest option) is on sale. */
   comparePrice?: string
+  /** The product, or any of its options, has an original price in the portal. */
+  onSale?: boolean
   badge?: string
   description: string
   image: string
@@ -62,11 +67,12 @@ export const FALLBACK_PRODUCTS: NgfProduct[] = [
     description:
       'Our effortlessly elegant stack starter, made magnetic! The Sheri Necklace features a sleek, modern silhouette and our signature magnetic ball closure—making it as functional as it is stylish. Perfect on its own, layered, or as a base for your next charm necklace!',
     priceCents: null,
+    compareAtCents: null,
     optionLabel: 'Length',
     options: [
-      { label: '16"', priceCents: 3900 },
-      { label: '18"', priceCents: 4400 },
-      { label: '20"', priceCents: 4900 },
+      { label: '16"', priceCents: 3900, compareAtCents: null },
+      { label: '18"', priceCents: 4400, compareAtCents: null },
+      { label: '20"', priceCents: 4900, compareAtCents: null },
     ],
     images: [
       '/assets/products/Necklace/Sheri/SHERI%20NECKLACE.jpg',
@@ -85,11 +91,12 @@ export const FALLBACK_PRODUCTS: NgfProduct[] = [
     description:
       'The Amie Necklace is the perfect everyday piece—simple, stylish, and easy to wear. Designed with a sleek gold finish and our signature magnetic heart clasp, it\'s made to elevate your stack with effortless charm.',
     priceCents: null,
+    compareAtCents: null,
     optionLabel: 'Length',
     options: [
-      { label: '16"', priceCents: 3900 },
-      { label: '18"', priceCents: 4400 },
-      { label: '20"', priceCents: 4900 },
+      { label: '16"', priceCents: 3900, compareAtCents: null },
+      { label: '18"', priceCents: 4400, compareAtCents: null },
+      { label: '20"', priceCents: 4900, compareAtCents: null },
     ],
     images: [
       '/assets/products/Necklace/Amie/AMIE%20NECKLACE%201.jpeg',
@@ -108,10 +115,11 @@ export const FALLBACK_PRODUCTS: NgfProduct[] = [
     description:
       'Meet Alaina — our customizable, everyday gold herringbone necklace. Whether you\'re layering it with your favorites or letting it shine on its own, the Alaina is perfect for daily wear & stack starting.',
     priceCents: null,
+    compareAtCents: null,
     optionLabel: 'Style',
     options: [
-      { label: 'Blank', priceCents: 4900 },
-      { label: 'Engraved', priceCents: 5400 },
+      { label: 'Blank', priceCents: 4900, compareAtCents: null },
+      { label: 'Engraved', priceCents: 5400, compareAtCents: null },
     ],
     images: [
       '/assets/products/Necklace/Alaina/ALAINA%20NECKLACE.jpg',
@@ -132,6 +140,7 @@ export const FALLBACK_PRODUCTS: NgfProduct[] = [
     description:
       'The Mary Turquoise Drop Necklace features bright, show-stopping turquoise beads spaced along a radiant 18k gold plated chain for a timeless, effortless look. Lightweight and elegant, it\'s a perfect statement piece with a touch of grace and color.',
     priceCents: 7900,
+    compareAtCents: null,
     optionLabel: null,
     options: [],
     images: [
@@ -150,10 +159,11 @@ export const FALLBACK_PRODUCTS: NgfProduct[] = [
     category: 'Bracelets',
     description: 'Your new favorite carabiner-clasp bracelet, fully customizable!',
     priceCents: null,
+    compareAtCents: null,
     optionLabel: 'Style',
     options: [
-      { label: 'Blank', priceCents: 5400 },
-      { label: 'Engraved', priceCents: 5900 },
+      { label: 'Blank', priceCents: 5400, compareAtCents: null },
+      { label: 'Engraved', priceCents: 5900, compareAtCents: null },
     ],
     images: [
       '/assets/products/Bracelet/Paris/PARIS%20BRACELET.jpg',
@@ -174,10 +184,11 @@ export const FALLBACK_PRODUCTS: NgfProduct[] = [
     description:
       'The Proverbs Herringbone Bracelet is a timeless statement of faith and elegance. Crafted with radiant 18k gold plating and designed for everyday wear, this sleek piece serves as a beautiful reminder to walk in wisdom, strength, and grace inspired by Scripture.',
     priceCents: null,
+    compareAtCents: null,
     optionLabel: 'Size',
     options: [
-      { label: '6.5"', priceCents: 3800 },
-      { label: '7"', priceCents: 4200 },
+      { label: '6.5"', priceCents: 3800, compareAtCents: null },
+      { label: '7"', priceCents: 4200, compareAtCents: null },
     ],
     images: [
       '/assets/products/Bracelet/Proverbs%20Herringbone/PROVERBS%20HERRINGBONE%20BRACELET.jpg',
