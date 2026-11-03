@@ -14,13 +14,25 @@ interface ProductModalProps {
   images?: string[]
   variants?: ProductVariant[]
   variantType?: string
+  /** The product offers engraving (the portal's "personalizable" flag). */
+  customizable?: boolean
   imageOnly?: boolean
   onClose: () => void
 }
 
+/**
+ * How much the buyer may type. The server keeps up to 200 characters
+ * (`priceCart`); a piece of jewelry takes far less. 50 is a placeholder until
+ * NOMA says what each piece physically fits — change it here.
+ */
+const ENGRAVING_MAX = 50
+
+/** An option whose label says "Engraved" is the engraved version of the piece. */
+const isEngravedOption = (label: string) => /engrav/i.test(label)
+
 export function ProductModal({
   productId, name, description, price, comparePrice, image, images,
-  variants, variantType = 'Size', imageOnly = false, onClose,
+  variants, variantType = 'Size', customizable = false, imageOnly = false, onClose,
 }: ProductModalProps) {
   const { addItem } = useCart()
 
@@ -45,13 +57,30 @@ export function ProductModal({
   const [added, setAdded] = useState(false)
   const [lightbox, setLightbox] = useState(false)
 
+  // Engraving. A product with an "Engraved" option asks for text only while that
+  // option is chosen, and needs it (an engraved piece with no text cannot be made).
+  // A personalizable product with no such option asks for text as an extra.
+  const [engraving, setEngraving] = useState('')
+  const [engravingMissing, setEngravingMissing] = useState(false)
+  const selectedLabel = hasVariants ? variants![selectedVariant].size : null
+  const hasEngravedOption = Boolean(variants?.some((v) => isEngravedOption(v.size)))
+  const showEngraving =
+    customizable && (!hasEngravedOption || (selectedLabel !== null && isEngravedOption(selectedLabel)))
+  const engravingRequired = showEngraving && hasEngravedOption
+
   const handleAddToCart = () => {
-    const selectedSize = hasVariants ? variants![selectedVariant].size : null
+    const selectedSize = selectedLabel
+    const text = showEngraving ? engraving.replace(/\s+/g, ' ').trim() : ''
+    if (engravingRequired && !text) {
+      setEngravingMissing(true)
+      return
+    }
     addItem({
       id: selectedSize ? `${productId}-${selectedSize}` : productId,
       title: selectedSize ? `${name} (${selectedSize})` : name,
       price: currentPrice,
       image,
+      customization: text || null,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1400)
@@ -313,6 +342,37 @@ export function ProductModal({
                     {v.size}<span>{v.price}</span>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {showEngraving && (
+              <div onClick={e => e.stopPropagation()}>
+                <label htmlFor="pm-engraving" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '6px' }}>
+                  {engravingRequired ? 'What should we engrave?' : 'Engraving (optional)'}
+                </label>
+                <input
+                  id="pm-engraving"
+                  type="text"
+                  value={engraving}
+                  maxLength={ENGRAVING_MAX}
+                  onChange={e => { setEngraving(e.target.value); setEngravingMissing(false); setAdded(false) }}
+                  placeholder="Initials, a name, a date…"
+                  aria-required={engravingRequired}
+                  aria-invalid={engravingMissing}
+                  aria-describedby="pm-engraving-hint"
+                  autoComplete="off"
+                  // 16px keeps iOS from zooming the page when the field is focused.
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px',
+                    border: `1.5px solid ${engravingMissing ? '#b3261e' : 'rgba(31,27,22,0.18)'}`,
+                    fontFamily: 'inherit', fontSize: '16px', color: 'var(--ink)', background: '#fff',
+                  }}
+                />
+                <p id="pm-engraving-hint" style={{ margin: '6px 0 0', fontSize: '0.75rem', color: engravingMissing ? '#b3261e' : 'var(--muted)' }}>
+                  {engravingMissing
+                    ? 'Please add the text you would like engraved.'
+                    : `Up to ${ENGRAVING_MAX} characters.`}
+                </p>
               </div>
             )}
 

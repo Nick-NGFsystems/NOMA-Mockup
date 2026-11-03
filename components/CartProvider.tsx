@@ -18,10 +18,20 @@ export interface CartItem {
   customization?: string | null
 }
 
+/**
+ * A cart line is a product (and option) PLUS its engraving text: two Alainas
+ * engraved "MA" and "JO" are two lines, not one with a quantity of 2. Keyed by
+ * the id alone they merged, and the second buyer's text was silently dropped.
+ */
+export function lineKey(item: Pick<CartItem, 'id' | 'customization'>): string {
+  return item.customization ? `${item.id}\u0000${item.customization}` : item.id
+}
+
 interface CartContextValue {
   items: CartItem[]
   addItem: (item: Omit<CartItem, 'qty'>) => void
-  updateQty: (id: string, delta: number) => void
+  /** `key` is a line's `lineKey`, not its product id. */
+  updateQty: (key: string, delta: number) => void
   /** Take the server's current prices into the cart (checkout's "your total changed" answer). */
   repriceItems: (prices: { id: string; unitCents: number }[]) => void
   /** Empty the cart. Call ONLY after a payment is confirmed settled. */
@@ -80,19 +90,20 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addItem = useCallback((item: Omit<CartItem, 'qty'>) => {
     setItems((prev) => {
-      const existing = prev.find((i) => i.id === item.id)
+      const key = lineKey(item)
+      const existing = prev.find((i) => lineKey(i) === key)
       const next = existing
-        ? prev.map((i) => (i.id === item.id ? { ...i, qty: i.qty + 1 } : i))
+        ? prev.map((i) => (lineKey(i) === key ? { ...i, qty: i.qty + 1 } : i))
         : [...prev, { ...item, qty: 1 }]
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
       return next
     })
   }, [])
 
-  const updateQty = useCallback((id: string, delta: number) => {
+  const updateQty = useCallback((key: string, delta: number) => {
     setItems((prev) => {
       const next = prev
-        .map((i) => (i.id === id ? { ...i, qty: i.qty + delta } : i))
+        .map((i) => (lineKey(i) === key ? { ...i, qty: i.qty + delta } : i))
         .filter((i) => i.qty > 0)
       try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
       return next

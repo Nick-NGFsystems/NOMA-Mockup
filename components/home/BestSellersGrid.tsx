@@ -19,6 +19,7 @@ interface ModalState {
   images?: string[]
   variants?: ProductVariant[]
   variantType?: string
+  customizable?: boolean
 }
 
 // Every field comes from the catalog. This grid used to be a website-editor
@@ -40,6 +41,7 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
       images: product.images,
       variants: product.variants,
       variantType: product.variantType,
+      customizable: product.customizable,
     })
   }
 
@@ -124,6 +126,7 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
           images={modal.images}
           variants={modal.variants}
           variantType={modal.variantType}
+          customizable={modal.customizable}
           onClose={() => setModal(null)}
         />
       )}

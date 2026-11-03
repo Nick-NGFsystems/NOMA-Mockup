@@ -1,16 +1,15 @@
 # Now — NOMA Designs
 
-_Last updated 2026-10-01. Overwrite, don't append; git keeps the history._
+_Last updated 2026-11-03. Overwrite, don't append; git keeps the history._
 
-**Status:** Live at https://www.noelleandmary.com on Next 16.3.6. Checkout runs on Square's **sandbox** (rechecked 2026-09-28: the shipped code loads only the sandbox SDK, with a sandbox app id). Reviews stay hidden until NOMA adds real ones. The shop sells from the NGF portal's **Products** page (on since 2026-09-28; saves reach the site at once). **Sale prices and shipping bands** are live since 2026-10-01 (#9, with NGF-Systems-app #32): an original price set on the portal's Products page shows crossed out with a Sale tag (display only; checkout charges the price), and checkout charges the portal's shipping price bands through the synced `lib/ngf-store.ts`. Neither is set yet, so the shop looks and charges as before (checked live 2026-10-01).
+**Status:** Live at https://www.noelleandmary.com on Next 16.3.6. Checkout is on Square **production** keys since 2026-11-03 (checked on the live bundle: production app id and location, no sandbox SDK; the access token and orders secret are not yet proven). Production is currently the build of branch `claude/noma-now-sales-live` (code identical to `main`'s #9). Shop sells from the NGF portal's Products page. Reviews hidden until real. Store settings are **not set**, so tax is $0 and shipping is free on every order.
 
-**Next:** One sandbox checkout with Square's test card (4111 1111 1111 1111, any future date, CVV 111), ideally with one original price and one shipping band set in the portal so both are seen live: set the order email in Store settings to your own address first — a PAID order emails the owner — then put NOMA's back and delete the test order.
+**In flight:** PR for the engraving text box (product popup, cart, checkout). Not merged or deployed yet; engraving orders have no text until it is.
 
-**Waiting on Nick:**
-- Send NOMA the questions document, if it hasn't gone yet. Prices, sale prices, bundles and the necklace's name are now theirs to set on the Products page, and shipping (including price bands) and tax in Store settings.
-- Vercel, Production environment: remove `NEXT_PUBLIC_SQUARE_APP_ID` and `NEXT_PUBLIC_SQUARE_LOCATION_ID` until the live keys exist, set `NEXT_PUBLIC_SITE_URL`, and set the Framework Preset to Next.js.
-- Delete the sandbox test orders from NOMA's portal before they see it.
+**Next:** (1) Merge the engraving PR and redeploy. (2) Run `npm run verify-orders -- --dry` locally with the production values. (3) In the NGF admin hub's Store settings: tax rule (Michigan) and shipping, with NOMA's numbers. (4) Delete the sandbox test orders from the portal. (5) Only then a first small real order.
 
-**Waiting on NOMA:** answers to the document; a 15-minute call to connect their live Square account.
+**Waiting on Nick:** `NEXT_PUBLIC_SITE_URL` in Vercel; Framework Preset to Next.js; the order-notification email in Store settings.
 
-**Open PRs:** none.
+**Waiting on NOMA:** tax rate, shipping prices, free-shipping threshold; what each piece's engraving fits (max length, now 50); what the Square promo code does and whether it is needed for launch (promo codes are unbuilt, see CLAUDE.md).
+
+**Open PRs:** the engraving one.
