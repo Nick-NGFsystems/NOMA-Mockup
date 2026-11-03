@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useCart } from '@/components/CartProvider'
 import type { ProductVariant } from '@/lib/site-data'
+import { EngravingTag, ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
 
 interface ProductModalProps {
   productId: string
@@ -14,13 +15,18 @@ interface ProductModalProps {
   images?: string[]
   variants?: ProductVariant[]
   variantType?: string
+  /** The product offers engraving (the portal's "personalizable" flag). */
+  customizable?: boolean
   imageOnly?: boolean
   onClose: () => void
 }
 
+/** An option whose label says "Engraved" is the engraved version of the piece. */
+const isEngravedOption = (label: string) => /engrav/i.test(label)
+
 export function ProductModal({
   productId, name, description, price, comparePrice, image, images,
-  variants, variantType = 'Size', imageOnly = false, onClose,
+  variants, variantType = 'Size', customizable = false, imageOnly = false, onClose,
 }: ProductModalProps) {
   const { addItem } = useCart()
 
@@ -45,13 +51,36 @@ export function ProductModal({
   const [added, setAdded] = useState(false)
   const [lightbox, setLightbox] = useState(false)
 
+  // Engraving. A product with an "Engraved" option asks for text only while that
+  // option is chosen, and needs it (an engraved piece with no text cannot be made).
+  // A personalizable product with no such option asks for text as an extra.
+  const [engraving, setEngraving] = useState('')
+  const [engravingMissing, setEngravingMissing] = useState(false)
+  // The font is part of the order: the shopper picks it here, the preview shows it,
+  // and it travels in the engraving text ("MA (Open Sans)") so it reaches Square.
+  const [font, setFont] = useState<FontKey>('clean')
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const selectedLabel = hasVariants ? variants![selectedVariant].size : null
+  const hasEngravedOption = Boolean(variants?.some((v) => isEngravedOption(v.size)))
+  const showEngraving =
+    customizable && (!hasEngravedOption || (selectedLabel !== null && isEngravedOption(selectedLabel)))
+  const engravingRequired = showEngraving && hasEngravedOption
+
   const handleAddToCart = () => {
-    const selectedSize = hasVariants ? variants![selectedVariant].size : null
+    const selectedSize = selectedLabel
+    const text = showEngraving ? engraving.replace(/\s+/g, ' ').trim() : ''
+    if (engravingRequired && !text) {
+      setEngravingMissing(true)
+      return
+    }
     addItem({
       id: selectedSize ? `${productId}-${selectedSize}` : productId,
       title: selectedSize ? `${name} (${selectedSize})` : name,
       price: currentPrice,
       image,
+      // Capitals, because the preview always shows capitals: what the shopper
+      // saw is what the order says.
+      customization: text ? `${text.toUpperCase()} (${FONTS[font].label})` : null,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1400)
@@ -313,6 +342,79 @@ export function ProductModal({
                     {v.size}<span>{v.price}</span>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {showEngraving && (
+              <div onClick={e => e.stopPropagation()}>
+                <label htmlFor="pm-engraving" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '6px' }}>
+                  {engravingRequired ? 'What should we engrave?' : 'Engraving (optional)'}
+                </label>
+                <input
+                  id="pm-engraving"
+                  type="text"
+                  value={engraving}
+                  maxLength={ENGRAVING_MAX_CHARS}
+                  onChange={e => { setEngraving(e.target.value); setEngravingMissing(false); setAdded(false) }}
+                  placeholder="Initials, a name, a date…"
+                  aria-required={engravingRequired}
+                  aria-invalid={engravingMissing}
+                  aria-describedby="pm-engraving-hint"
+                  autoComplete="off"
+                  // 16px keeps iOS from zooming the page when the field is focused.
+                  style={{
+                    width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px',
+                    border: `1.5px solid ${engravingMissing ? '#b3261e' : 'rgba(31,27,22,0.18)'}`,
+                    fontFamily: 'inherit', fontSize: '16px', color: 'var(--ink)', background: '#fff',
+                  }}
+                />
+                <p id="pm-engraving-hint" style={{ margin: '6px 0 0', fontSize: '0.75rem', color: engravingMissing ? '#b3261e' : 'var(--muted)' }}>
+                  {engravingMissing
+                    ? 'Please add the text you would like engraved.'
+                    : `Up to ${ENGRAVING_MAX_CHARS} characters.`}
+                </p>
+
+                <div role="radiogroup" aria-label="Font style" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
+                  {(Object.keys(FONTS) as FontKey[]).map((key) => {
+                    const def = FONTS[key]
+                    const active = font === key
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        role="radio"
+                        aria-checked={active}
+                        onClick={() => { setFont(key); setAdded(false) }}
+                        style={{
+                          flex: '1 1 0', minWidth: '88px', padding: '8px 10px', borderRadius: '10px', cursor: 'pointer',
+                          border: active ? '1.5px solid var(--accent)' : '1px solid rgba(31,27,22,0.18)',
+                          background: active ? 'var(--beige)' : '#fff', fontFamily: 'inherit',
+                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
+                        }}
+                      >
+                        <span style={{ fontFamily: def.family, fontStyle: def.italic ? 'italic' : 'normal', fontSize: '1.1rem', color: 'var(--ink)', lineHeight: 1 }}>Aa</span>
+                        <span style={{ fontSize: '0.68rem', color: active ? 'var(--ink)' : 'var(--muted)' }}>{def.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPreviewOpen(v => !v)}
+                  aria-expanded={previewOpen}
+                  aria-controls="pm-engraving-preview"
+                  className="pm-desc-btn"
+                  style={{ marginTop: '10px', textDecoration: 'underline', textUnderlineOffset: '3px' }}
+                >
+                  {previewOpen ? 'Hide preview' : 'See how it looks'}
+                </button>
+                {previewOpen && (
+                  <div id="pm-engraving-preview" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
+                    <EngravingTag text={engraving} font={font} />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Preview</p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -117,6 +117,7 @@ function ProductCard({ product, index }: {
           images={product.images}
           variants={product.variants}
           variantType={product.variantType}
+          customizable={product.customizable}
           onClose={() => setModalOpen(false)}
         />
       )}

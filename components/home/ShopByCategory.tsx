@@ -16,6 +16,7 @@ interface ModalState {
   images?: string[]
   variants?: ProductVariant[]
   variantType?: string
+  customizable?: boolean
 }
 
 function filterProducts(products: Product[], metals: Set<string>, types: Set<string>): Product[] {
@@ -183,7 +184,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
               {filtered.slice(0, 4).map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: product.price, comparePrice: product.comparePrice, image: product.image, images: product.images, variants: product.variants, variantType: product.variantType })}
+                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: product.price, comparePrice: product.comparePrice, image: product.image, images: product.images, variants: product.variants, variantType: product.variantType, customizable: product.customizable })}
                   style={{
                     border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
                     background: '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
@@ -216,7 +217,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
         <ProductModal
           productId={modal.productId} name={modal.name} description={modal.description}
           price={modal.price} comparePrice={modal.comparePrice} image={modal.image} images={modal.images}
-          variants={modal.variants} variantType={modal.variantType}
+          variants={modal.variants} variantType={modal.variantType} customizable={modal.customizable}
           onClose={() => setModal(null)}
         />
       )}
