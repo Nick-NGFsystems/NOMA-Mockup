@@ -1,9 +1,9 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 
-type FontKey = 'clean' | 'elegant' | 'classic'
+export type FontKey = 'clean' | 'elegant' | 'classic'
 
-interface FontDef {
+export interface FontDef {
   label: string
   family: string
   italic: boolean
@@ -14,7 +14,7 @@ interface FontDef {
   canvasFamily: string
 }
 
-const FONTS: Record<FontKey, FontDef> = {
+export const FONTS: Record<FontKey, FontDef> = {
   clean: {
     label: 'Open Sans',
     family: "'Open Sans', system-ui, sans-serif",
@@ -44,6 +44,14 @@ const FONTS: Record<FontKey, FontDef> = {
   },
 }
 
+/**
+ * How many characters fit on the tag. This page has always promised 10 ("0 / 10"),
+ * and the product popup's engraving box uses the same number, so what a shopper
+ * previews is what they can order. Placeholder until NOMA confirms what each
+ * piece physically fits.
+ */
+export const ENGRAVING_MAX_CHARS = 10
+
 // Maximum font size at BASE_TAG_WIDTH — text always starts here and shrinks to fit width.
 // This makes short text (e.g. "LOVE") fill the preview, while long text scales down.
 const MAX_FONT_SIZE  = 96
@@ -65,17 +73,12 @@ function measureText(text: string, fontSize: number, def: FontDef): number {
   return (baseWidth + spacingExtra) * 1.12
 }
 
-interface EngravingPreviewProps {
-  eyebrow: string
-  headline: string
-  lede: string
-}
-
-export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewProps) {
-  const [text, setText] = useState('')
-  const [font, setFont] = useState<FontKey>('clean')
+/**
+ * The tag image with the shopper's text laid on it, sized to fit. Used by the
+ * Engraving section below and by the product popup's "See how it looks".
+ */
+export function EngravingTag({ text, font }: { text: string; font: FontKey }) {
   const [scaledFontSize, setScaledFontSize] = useState(MAX_FONT_SIZE)
-
   const tagContainerRef = useRef<HTMLDivElement>(null)
 
   const activeFont  = FONTS[font]
@@ -114,6 +117,83 @@ export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewPr
     observer.observe(el)
     return () => observer.disconnect()
   }, [computeFontSize])
+
+  return (
+    <div
+      ref={tagContainerRef}
+      style={{
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        width: 'min(400px, 100%)',
+        maxWidth: '100%',
+        boxSizing: 'border-box',
+      }}
+    >
+      <img
+        src="/BlankTAGnoBackground.png"
+        alt="Jewelry Tag"
+        style={{
+          width: '100%',
+          height: 'auto',
+          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))',
+        }}
+      />
+      <div
+        style={{
+          position: 'absolute',
+          top: '11.14%',
+          left: 'calc(5.25% + 2px)',
+          width: '72%',
+          height: '76.58%',
+          textAlign: 'center',
+          pointerEvents: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        <span
+          style={{
+            display: 'block',
+            fontFamily: activeFont.family,
+            fontStyle: activeFont.italic ? 'italic' : 'normal',
+            fontSize: `${scaledFontSize}px`,
+            fontWeight: 700,
+            color: '#3f2d1a',
+            letterSpacing: activeFont.letterSpacing,
+            textTransform: activeFont.textTransform,
+            opacity: 0.68,
+            mixBlendMode: 'multiply',
+            textShadow: '0 -0.9px 0 rgba(255,246,225,0.28), 0 1.4px 0 rgba(58,40,20,0.48), 0 2.6px 3px rgba(28,18,10,0.24), 0 0 0.6px rgba(30,20,11,0.2)',
+            WebkitTextStroke: '0.2px rgba(34,22,12,0.3)',
+            lineHeight: 1.3,
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            maxWidth: '100%',
+          }}
+        >
+          {displayText}
+        </span>
+      </div>
+    </div>
+  )
+}
+
+interface EngravingPreviewProps {
+  eyebrow: string
+  headline: string
+  lede: string
+}
+
+export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewProps) {
+  const [text, setText] = useState('')
+  const [font, setFont] = useState<FontKey>('clean')
+
+  const activeFont  = FONTS[font]
 
   return (
     <div
@@ -159,12 +239,12 @@ export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewPr
               <label htmlFor="engText" style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)' }}>
                 Your Text
               </label>
-              <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{text.length} / 10</span>
+              <span style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>{text.length} / {ENGRAVING_MAX_CHARS}</span>
             </div>
             <input
               id="engText"
               type="text"
-              maxLength={10}
+              maxLength={ENGRAVING_MAX_CHARS}
               value={text}
               onChange={(e) => setText(e.target.value)}
               placeholder="Your Text"
@@ -227,67 +307,7 @@ export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewPr
 
         {/* Right: live preview */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', width: '100%', minWidth: 0 }}>
-          <div
-            ref={tagContainerRef}
-            style={{
-              position: 'relative',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '20px',
-              width: 'min(400px, 100%)',
-              maxWidth: '100%',
-              boxSizing: 'border-box',
-            }}
-          >
-            <img
-              src="/BlankTAGnoBackground.png"
-              alt="Jewelry Tag"
-              style={{
-                width: '100%',
-                height: 'auto',
-                filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))',
-              }}
-            />
-            <div
-              style={{
-                position: 'absolute',
-                top: '11.14%',
-                left: 'calc(5.25% + 2px)',
-                width: '72%',
-                height: '76.58%',
-                textAlign: 'center',
-                pointerEvents: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                overflow: 'hidden',
-              }}
-            >
-              <span
-                style={{
-                  display: 'block',
-                  fontFamily: activeFont.family,
-                  fontStyle: activeFont.italic ? 'italic' : 'normal',
-                  fontSize: `${scaledFontSize}px`,
-                  fontWeight: 700,
-                  color: '#3f2d1a',
-                  letterSpacing: activeFont.letterSpacing,
-                  textTransform: activeFont.textTransform,
-                  opacity: 0.68,
-                  mixBlendMode: 'multiply',
-                  textShadow: '0 -0.9px 0 rgba(255,246,225,0.28), 0 1.4px 0 rgba(58,40,20,0.48), 0 2.6px 3px rgba(28,18,10,0.24), 0 0 0.6px rgba(30,20,11,0.2)',
-                  WebkitTextStroke: '0.2px rgba(34,22,12,0.3)',
-                  lineHeight: 1.3,
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  maxWidth: '100%',
-                }}
-              >
-                {displayText}
-              </span>
-            </div>
-          </div>
+          <EngravingTag text={text} font={font} />
           <p style={{ fontSize: '0.8rem', color: 'var(--muted)', letterSpacing: '0.04em', margin: 0, textAlign: 'center' }}>
             Preview
           </p>
@@ -295,4 +315,3 @@ export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewPr
     </div>
   )
 }
-
