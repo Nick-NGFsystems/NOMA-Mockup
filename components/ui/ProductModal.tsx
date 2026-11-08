@@ -151,11 +151,15 @@ export function ProductModal({
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
+          /* Still scrolls (wheel, touch, keys); only the bar itself is hidden. */
+          scrollbar-width: none;
+          -ms-overflow-style: none;
           box-shadow: 0 48px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07);
           animation: pmFadeUp 300ms cubic-bezier(0.22,1,0.36,1) both;
           display: flex;
           flex-direction: column;
         }
+        .pm-card::-webkit-scrollbar { display: none; }
         /* Image section: natural height, capped so it never dominates */
         .pm-hero {
           position: relative;
