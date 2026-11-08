@@ -444,7 +444,7 @@ export function ProductModal({
                 </button>
                 {previewOpen && (
                   <div id="pm-engraving-preview" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                    <EngravingTag text={engraving} font={font} />
+                    <EngravingTag text={engraving} font={font} flat />
                     <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Preview</p>
                   </div>
                 )}

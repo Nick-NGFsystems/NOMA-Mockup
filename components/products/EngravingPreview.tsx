@@ -77,7 +77,12 @@ function measureText(text: string, fontSize: number, def: FontDef): number {
  * The tag image with the shopper's text laid on it, sized to fit. Used by the
  * Engraving section below and by the product popup's "See how it looks".
  */
-export function EngravingTag({ text, font }: { text: string; font: FontKey }) {
+export function EngravingTag({ text, font, flat = false }: { text: string; font: FontKey; flat?: boolean }) {
+  // `flat` drops the photo's drop-shadow and the text's multiply blend. Inside the
+  // product popup (a scrolling box that resizes when the preview opens or the
+  // font changes) iOS Safari painted the photo only half-way down with them on,
+  // while the text stayed where the full tag should be. The Engraving section
+  // is not in a scrolling box and keeps both.
   const [scaledFontSize, setScaledFontSize] = useState(MAX_FONT_SIZE)
   const tagContainerRef = useRef<HTMLDivElement>(null)
 
@@ -138,7 +143,7 @@ export function EngravingTag({ text, font }: { text: string; font: FontKey }) {
         style={{
           width: '100%',
           height: 'auto',
-          filter: 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))',
+          filter: flat ? undefined : 'drop-shadow(0 8px 24px rgba(0,0,0,0.15))',
         }}
       />
       <div
@@ -166,8 +171,8 @@ export function EngravingTag({ text, font }: { text: string; font: FontKey }) {
             color: '#3f2d1a',
             letterSpacing: activeFont.letterSpacing,
             textTransform: activeFont.textTransform,
-            opacity: 0.68,
-            mixBlendMode: 'multiply',
+            opacity: flat ? 0.78 : 0.68,
+            mixBlendMode: flat ? undefined : 'multiply',
             textShadow: '0 -0.9px 0 rgba(255,246,225,0.28), 0 1.4px 0 rgba(58,40,20,0.48), 0 2.6px 3px rgba(28,18,10,0.24), 0 0 0.6px rgba(30,20,11,0.2)',
             WebkitTextStroke: '0.2px rgba(34,22,12,0.3)',
             lineHeight: 1.3,
