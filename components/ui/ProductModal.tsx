@@ -36,6 +36,24 @@ export function ProductModal({
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  // The area of the screen that is actually visible. On a phone the on-screen
+  // keyboard shrinks this but NOT `vh`, so a card sized in `vh` ran underneath the
+  // keyboard and the browser fought to scroll the text box into view (the page
+  // snapped back to the top). The popup is sized to this instead.
+  const [visible, setVisible] = useState<{ height: number; top: number } | null>(null)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setVisible({ height: Math.round(vv.height), top: Math.round(vv.offsetTop) })
+    update()
+    vv.addEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
+  }, [])
+
   const gallery = (images && images.length > 0) ? images : [image]
   const [selectedImg, setSelectedImg] = useState(0)
   const activeImage = gallery[selectedImg]
@@ -127,17 +145,21 @@ export function ProductModal({
           position: relative;
           width: 100%;
           max-width: 460px;
-          max-height: 90vh;
+          max-height: calc(var(--pm-vh, 100vh) * 0.9);
           border-radius: 28px;
           overflow-x: hidden;
           overflow-y: auto;
           -webkit-overflow-scrolling: touch;
           overscroll-behavior: contain;
+          /* Still scrolls (wheel, touch, keys); only the bar itself is hidden. */
+          scrollbar-width: none;
+          -ms-overflow-style: none;
           box-shadow: 0 48px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.07);
           animation: pmFadeUp 300ms cubic-bezier(0.22,1,0.36,1) both;
           display: flex;
           flex-direction: column;
         }
+        .pm-card::-webkit-scrollbar { display: none; }
         /* Image section: natural height, capped so it never dominates */
         .pm-hero {
           position: relative;
@@ -149,7 +171,7 @@ export function ProductModal({
         .pm-main-img {
           width: 100%;
           height: auto;
-          max-height: 55vh;
+          max-height: min(55vh, calc(var(--pm-vh, 100vh) * 0.55));
           object-fit: contain;
           display: block;
         }
@@ -278,7 +300,12 @@ export function ProductModal({
         role="dialog" aria-modal="true" aria-label={name}
         onClick={onClose}
         style={{
-          position: 'fixed', inset: 0, zIndex: 1000,
+          position: 'fixed', zIndex: 1000,
+          // Follow the visible area (see `visible`); fall back to the full screen.
+          ...(visible
+            ? { left: 0, right: 0, top: visible.top, height: visible.height }
+            : { inset: 0 }),
+          '--pm-vh': visible ? `${visible.height}px` : '100vh',
           background: 'rgba(8,5,3,0.82)',
           backdropFilter: 'blur(18px)', WebkitBackdropFilter: 'blur(18px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -286,7 +313,7 @@ export function ProductModal({
           animation: 'pmFadeIn 200ms ease both',
           overscrollBehavior: 'contain',
           touchAction: 'none',
-        }}
+        } as unknown as React.CSSProperties /* '--pm-vh' is a CSS variable, not a known property */}
       >
         {/* Card wrapper — relative so corner button floats on the corner */}
         <div style={{ position: 'relative', width: '100%', maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
@@ -356,6 +383,12 @@ export function ProductModal({
                   value={engraving}
                   maxLength={ENGRAVING_MAX_CHARS}
                   onChange={e => { setEngraving(e.target.value); setEngravingMissing(false); setAdded(false) }}
+                  // Once the keyboard has finished opening, bring the box to the
+                  // middle of the card's own scroll area.
+                  onFocus={e => {
+                    const el = e.currentTarget
+                    window.setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
+                  }}
                   placeholder="Initials, a name, a date…"
                   aria-required={engravingRequired}
                   aria-invalid={engravingMissing}
@@ -411,7 +444,7 @@ export function ProductModal({
                 </button>
                 {previewOpen && (
                   <div id="pm-engraving-preview" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                    <EngravingTag text={engraving} font={font} />
+                    <EngravingTag text={engraving} font={font} flat />
                     <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Preview</p>
                   </div>
                 )}
