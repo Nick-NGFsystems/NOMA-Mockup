@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { useCart } from '@/components/CartProvider'
+import { useCart, type CartItem } from '@/components/CartProvider'
 import type { ProductVariant } from '@/lib/site-data'
 import { EngravingTag, ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
 
@@ -18,6 +18,16 @@ interface ProductModalProps {
   /** The product offers engraving (the portal's "personalizable" flag). */
   customizable?: boolean
   imageOnly?: boolean
+  /**
+   * Editing a line already in the cart: start on that line's option, engraving
+   * and font, and hand the result to `onSubmit` (which replaces the line) instead
+   * of adding a new one.
+   */
+  mode?: 'add' | 'edit'
+  initialVariant?: string | null
+  initialEngraving?: string
+  initialFont?: FontKey
+  onSubmit?: (item: Omit<CartItem, 'qty'>) => void
   onClose: () => void
 }
 
@@ -26,7 +36,8 @@ const isEngravedOption = (label: string) => /engrav/i.test(label)
 
 export function ProductModal({
   productId, name, description, price, comparePrice, image, images,
-  variants, variantType = 'Size', customizable = false, imageOnly = false, onClose,
+  variants, variantType = 'Size', customizable = false, imageOnly = false,
+  mode = 'add', initialVariant = null, initialEngraving = '', initialFont = 'clean', onSubmit, onClose,
 }: ProductModalProps) {
   const { addItem } = useCart()
 
@@ -61,7 +72,10 @@ export function ProductModal({
   const nextImg = () => setSelectedImg(i => (i + 1) % gallery.length)
 
   const hasVariants = variants && variants.length > 0
-  const [selectedVariant, setSelectedVariant] = useState(0)
+  const [selectedVariant, setSelectedVariant] = useState(() => {
+    const at = initialVariant && variants ? variants.findIndex((v) => v.size === initialVariant) : -1
+    return at >= 0 ? at : 0
+  })
   const currentPrice = hasVariants ? variants![selectedVariant].price : price
   const currentCompare = hasVariants ? variants![selectedVariant].comparePrice : comparePrice
 
@@ -72,11 +86,11 @@ export function ProductModal({
   // Engraving. A product with an "Engraved" option asks for text only while that
   // option is chosen, and needs it (an engraved piece with no text cannot be made).
   // A personalizable product with no such option asks for text as an extra.
-  const [engraving, setEngraving] = useState('')
+  const [engraving, setEngraving] = useState(initialEngraving)
   const [engravingMissing, setEngravingMissing] = useState(false)
   // The font is part of the order: the shopper picks it here, the preview shows it,
   // and it travels in the engraving text ("MA (Open Sans)") so it reaches Square.
-  const [font, setFont] = useState<FontKey>('clean')
+  const [font, setFont] = useState<FontKey>(initialFont)
   const [previewOpen, setPreviewOpen] = useState(false)
   const selectedLabel = hasVariants ? variants![selectedVariant].size : null
   const hasEngravedOption = Boolean(variants?.some((v) => isEngravedOption(v.size)))
@@ -91,7 +105,7 @@ export function ProductModal({
       setEngravingMissing(true)
       return
     }
-    addItem({
+    const item = {
       id: selectedSize ? `${productId}-${selectedSize}` : productId,
       title: selectedSize ? `${name} (${selectedSize})` : name,
       price: currentPrice,
@@ -99,7 +113,13 @@ export function ProductModal({
       // Capitals, because the preview always shows capitals: what the shopper
       // saw is what the order says.
       customization: text ? `${text.toUpperCase()} (${FONTS[font].label})` : null,
-    })
+    }
+    if (mode === 'edit' && onSubmit) {
+      onSubmit(item)
+      onClose()
+      return
+    }
+    addItem(item)
     setAdded(true)
     setTimeout(() => setAdded(false), 1400)
   }
@@ -461,7 +481,7 @@ export function ProductModal({
                     : 'linear-gradient(135deg,#1f1b16,#2b241d)',
                   color: '#fff',
                 }}>
-                {added ? 'Added!' : 'Add to Cart'}
+                {mode === 'edit' ? 'Update item' : added ? 'Added!' : 'Add to Cart'}
               </button>
             </div>
           </div>

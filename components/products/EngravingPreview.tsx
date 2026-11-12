@@ -45,6 +45,21 @@ export const FONTS: Record<FontKey, FontDef> = {
 }
 
 /**
+ * Read a cart line's engraving ("MARY (Cormorant Italic)") back into the text and
+ * the font the shopper picked, so the popup can be reopened on that line. Anything
+ * that does not end in one of the three font names is taken as plain text in the
+ * default font.
+ */
+export function parseEngraving(customization: string | null | undefined): { text: string; font: FontKey } {
+  const value = (customization ?? '').trim()
+  for (const key of Object.keys(FONTS) as FontKey[]) {
+    const suffix = ` (${FONTS[key].label})`
+    if (value.endsWith(suffix)) return { text: value.slice(0, -suffix.length), font: key }
+  }
+  return { text: value, font: 'clean' }
+}
+
+/**
  * How many characters fit on the tag. This page has always promised 10 ("0 / 10"),
  * and the product popup's engraving box uses the same number, so what a shopper
  * previews is what they can order. Placeholder until NOMA confirms what each

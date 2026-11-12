@@ -1,7 +1,11 @@
 'use client'
 import Image from 'next/image'
 import Link from 'next/link'
-import { lineKey, useCart } from '@/components/CartProvider'
+import { useState } from 'react'
+import { lineKey, useCart, type CartItem } from '@/components/CartProvider'
+import { ProductModal } from '@/components/ui/ProductModal'
+import { parseEngraving, type FontKey } from '@/components/products/EngravingPreview'
+import type { Product } from '@/lib/site-data'
 
 function parsePrice(p: string) {
   return Number(p.replace(/[^0-9.]/g, '')) || 0
@@ -11,8 +15,40 @@ function formatCurrency(v: number) {
   return `$${v.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
 }
 
-export function CartPageClient() {
-  const { items, updateQty } = useCart()
+/**
+ * Which product (and option) a cart line is, so tapping it can reopen that
+ * product. A line's id is the product id, or `<id>-<option label>`. Null when the
+ * product is no longer in the catalog: that line cannot be edited, only removed.
+ */
+function resolveLine(item: CartItem, products: Product[]): { product: Product; variant: string | null } | null {
+  const exact = products.find((p) => p.id === item.id)
+  if (exact && !(exact.variants && exact.variants.length > 0)) return { product: exact, variant: null }
+  for (const p of products) {
+    if (!item.id.startsWith(`${p.id}-`)) continue
+    const label = item.id.slice(p.id.length + 1)
+    if (p.variants?.some((v) => v.size === label)) return { product: p, variant: label }
+  }
+  return null
+}
+
+interface Editing {
+  key: string
+  product: Product
+  variant: string | null
+  engraving: string
+  font: FontKey
+}
+
+export function CartPageClient({ products = [] }: { products?: Product[] }) {
+  const { items, updateQty, replaceItem } = useCart()
+  const [editing, setEditing] = useState<Editing | null>(null)
+
+  const openEditor = (item: CartItem) => {
+    const line = resolveLine(item, products)
+    if (!line) return
+    const { text, font } = parseEngraving(item.customization)
+    setEditing({ key: lineKey(item), product: line.product, variant: line.variant, engraving: text, font })
+  }
 
   const subtotal = items.reduce((sum, i) => sum + parsePrice(i.price) * i.qty, 0)
 
@@ -35,12 +71,20 @@ export function CartPageClient() {
               </Link>
             </div>
           ) : (
-            items.map((item) => (
+            items.map((item) => {
+              const editable = resolveLine(item, products) !== null
+              return (
               <article
                 key={lineKey(item)}
                 className="flex gap-4 p-4 rounded-2xl border border-[var(--border)] bg-[var(--panel)]"
               >
-                <div className="relative w-24 h-24 rounded-xl overflow-hidden bg-[var(--beige)] shrink-0">
+                <button
+                  type="button"
+                  onClick={() => openEditor(item)}
+                  disabled={!editable}
+                  aria-label={editable ? `Edit ${item.title}` : undefined}
+                  className={`relative w-24 h-24 rounded-xl overflow-hidden bg-[var(--beige)] shrink-0 p-0 border-0 ${editable ? 'cursor-pointer' : 'cursor-default'}`}
+                >
                   {item.image ? (
                     <Image
                       src={item.image}
@@ -59,11 +103,26 @@ export function CartPageClient() {
                   ) : (
                     <div className="w-full h-full bg-[var(--beige)]" />
                   )}
-                </div>
+                </button>
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-serif text-lg text-[var(--ink)] truncate">{item.title}</h3>
+                  <h3 className="font-serif text-lg text-[var(--ink)] truncate">
+                    {editable ? (
+                      <button type="button" onClick={() => openEditor(item)} className="text-left max-w-full truncate cursor-pointer hover:underline">
+                        {item.title}
+                      </button>
+                    ) : item.title}
+                  </h3>
                   {item.customization && (
                     <p className="text-sm text-[var(--muted)] mt-1 break-words">Engraving: {item.customization}</p>
+                  )}
+                  {editable && (
+                    <button
+                      type="button"
+                      onClick={() => openEditor(item)}
+                      className="text-sm text-[var(--muted)] underline underline-offset-2 hover:text-[var(--ink)] mt-1 cursor-pointer"
+                    >
+                      Edit
+                    </button>
                   )}
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-semibold text-[var(--ink)]">{item.price}</span>
@@ -87,7 +146,8 @@ export function CartPageClient() {
                   </div>
                 </div>
               </article>
-            ))
+              )
+            })
           )}
         </div>
 
@@ -132,6 +192,29 @@ export function CartPageClient() {
           </aside>
         )}
       </div>
+
+      {editing && (
+        <ProductModal
+          // A new key per line, so the popup starts fresh on each one.
+          key={editing.key}
+          mode="edit"
+          productId={editing.product.id}
+          name={editing.product.name}
+          description={editing.product.description}
+          price={editing.product.price}
+          comparePrice={editing.product.comparePrice}
+          image={editing.product.image}
+          images={editing.product.images}
+          variants={editing.product.variants}
+          variantType={editing.product.variantType}
+          customizable={editing.product.customizable}
+          initialVariant={editing.variant}
+          initialEngraving={editing.engraving}
+          initialFont={editing.font}
+          onSubmit={(item) => replaceItem(editing.key, item)}
+          onClose={() => setEditing(null)}
+        />
+      )}
     </div>
   )
 }
