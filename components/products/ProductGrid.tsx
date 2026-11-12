@@ -12,6 +12,8 @@ interface ProductGridProps {
   products: Product[]
   initialMetals?: string[]
   initialTypes?: string[]
+  /** A product id whose popup should be open when the page loads. */
+  openProductId?: string
 }
 
 type SortKey = 'featured' | 'price-asc' | 'price-desc'
@@ -26,11 +28,12 @@ function parsePrice(p: string) {
 // on screen while checkout charged another, and pointed at the wrong card as
 // soon as the grid was sorted or filtered. Products are edited on the portal's
 // Products page now, which is also what checkout charges from.
-function ProductCard({ product, index }: {
+function ProductCard({ product, index, startOpen = false }: {
   product: Product
   index: number
+  startOpen?: boolean
 }) {
-  const [modalOpen, setModalOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(startOpen)
 
   return (
     <>
@@ -126,7 +129,7 @@ function ProductCard({ product, index }: {
 }
 
 // ── Main grid component ───────────────────────────────────────────────────────
-export function ProductGrid({ products, initialMetals = [], initialTypes = [] }: ProductGridProps) {
+export function ProductGrid({ products, initialMetals = [], initialTypes = [], openProductId }: ProductGridProps) {
   const [activeMetals, setActiveMetals] = useState<Set<string>>(new Set(initialMetals))
   const [activeTypes,  setActiveTypes]  = useState<Set<string>>(new Set(initialTypes))
   const [sort,  setSort]  = useState<SortKey>('featured')
@@ -309,6 +312,7 @@ export function ProductGrid({ products, initialMetals = [], initialTypes = [] }:
             key={product.id}
             product={product}
             index={i}
+            startOpen={product.id === openProductId}
           />
         ))}
 

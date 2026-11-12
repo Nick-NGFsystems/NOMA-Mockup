@@ -14,6 +14,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   const params = await searchParams
   const initialMetals = params.metals ? params.metals.split(',') : []
   const initialTypes  = params.types  ? params.types.split(',')  : []
+  // /products?product=<id> opens that product's popup (the cart's "View product" link).
+  const openProductId = params.product || undefined
   const [content, catalog] = await Promise.all([getNgfContent(), getCatalog()])
 
   const productsEyebrow = content['products.eyebrow'] || 'The NOMA Edit'
@@ -57,7 +59,7 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       {/* ── Product grid ── */}
       <div className="products-grid-wrapper">
-        <ProductGrid products={catalog.products} initialMetals={initialMetals} initialTypes={initialTypes} />
+        <ProductGrid products={catalog.products} initialMetals={initialMetals} initialTypes={initialTypes} openProductId={openProductId} />
       </div>
 
       {/* ── Bundles ── */}

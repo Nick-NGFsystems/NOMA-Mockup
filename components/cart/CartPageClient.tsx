@@ -31,6 +31,9 @@ function resolveLine(item: CartItem, products: Product[]): { product: Product; v
   return null
 }
 
+/** The shop page with this product's popup already open (see app/products/page.tsx). */
+const productHref = (id: string) => `/products?product=${encodeURIComponent(id)}`
+
 interface Editing {
   key: string
   product: Product
@@ -72,7 +75,8 @@ export function CartPageClient({ products = [] }: { products?: Product[] }) {
             </div>
           ) : (
             items.map((item) => {
-              const editable = resolveLine(item, products) !== null
+              const line = resolveLine(item, products)
+              const editable = line !== null
               return (
               <article
                 key={lineKey(item)}
@@ -115,14 +119,22 @@ export function CartPageClient({ products = [] }: { products?: Product[] }) {
                   {item.customization && (
                     <p className="text-sm text-[var(--muted)] mt-1 break-words">Engraving: {item.customization}</p>
                   )}
-                  {editable && (
-                    <button
-                      type="button"
-                      onClick={() => openEditor(item)}
-                      className="text-sm text-[var(--muted)] underline underline-offset-2 hover:text-[var(--ink)] mt-1 cursor-pointer"
-                    >
-                      Edit
-                    </button>
+                  {line && (
+                    <div className="flex gap-4 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => openEditor(item)}
+                        className="text-sm text-[var(--muted)] underline underline-offset-2 hover:text-[var(--ink)] cursor-pointer"
+                      >
+                        Edit
+                      </button>
+                      <Link
+                        href={productHref(line.product.id)}
+                        className="text-sm text-[var(--muted)] underline underline-offset-2 hover:text-[var(--ink)]"
+                      >
+                        View product
+                      </Link>
+                    </div>
                   )}
                   <div className="flex items-center justify-between mt-2">
                     <span className="font-semibold text-[var(--ink)]">{item.price}</span>
@@ -208,6 +220,7 @@ export function CartPageClient({ products = [] }: { products?: Product[] }) {
           variants={editing.product.variants}
           variantType={editing.product.variantType}
           customizable={editing.product.customizable}
+          viewProductHref={productHref(editing.product.id)}
           initialVariant={editing.variant}
           initialEngraving={editing.engraving}
           initialFont={editing.font}

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useCart, type CartItem } from '@/components/CartProvider'
 import type { ProductVariant } from '@/lib/site-data'
 import { EngravingTag, ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
@@ -28,6 +29,8 @@ interface ProductModalProps {
   initialEngraving?: string
   initialFont?: FontKey
   onSubmit?: (item: Omit<CartItem, 'qty'>) => void
+  /** Edit mode only: a link to this product in the shop, under the title. */
+  viewProductHref?: string
   onClose: () => void
 }
 
@@ -37,7 +40,7 @@ const isEngravedOption = (label: string) => /engrav/i.test(label)
 export function ProductModal({
   productId, name, description, price, comparePrice, image, images,
   variants, variantType = 'Size', customizable = false, imageOnly = false,
-  mode = 'add', initialVariant = null, initialEngraving = '', initialFont = 'clean', onSubmit, onClose,
+  mode = 'add', initialVariant = null, initialEngraving = '', initialFont = 'clean', onSubmit, viewProductHref, onClose,
 }: ProductModalProps) {
   const { addItem } = useCart()
 
@@ -372,6 +375,15 @@ export function ProductModal({
           {/* Info panel */}
           <div className="pm-panel">
             <h2 className="pm-title">{name}</h2>
+            {viewProductHref && (
+              <Link
+                href={viewProductHref}
+                onClick={onClose}
+                style={{ fontSize: '0.8rem', color: 'var(--muted)', textDecoration: 'underline', textUnderlineOffset: '3px', alignSelf: 'flex-start' }}
+              >
+                View product
+              </Link>
+            )}
 
             <div>
               <button className="pm-desc-btn" onClick={() => setDescOpen(v => !v)}>
