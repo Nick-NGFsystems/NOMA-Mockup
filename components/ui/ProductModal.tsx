@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { useCart, type CartItem } from '@/components/CartProvider'
 import type { ProductVariant } from '@/lib/site-data'
 import { EngravingTag, ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
+import { EngravableTag } from '@/components/ui/EngravableTag'
+import { engravingShape } from '@/lib/engraving-shapes'
 
 interface ProductModalProps {
   productId: string
@@ -375,6 +377,11 @@ export function ProductModal({
           {/* Info panel */}
           <div className="pm-panel">
             <h2 className="pm-title">{name}</h2>
+            {customizable && (
+              <div style={{ alignSelf: 'flex-start' }}>
+                <EngravableTag />
+              </div>
+            )}
             {viewProductHref && (
               <Link
                 href={viewProductHref}
@@ -476,7 +483,7 @@ export function ProductModal({
                 </button>
                 {previewOpen && (
                   <div id="pm-engraving-preview" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                    <EngravingTag text={engraving} font={font} flat />
+                    <EngravingTag text={engraving} font={font} flat shape={engravingShape(productId)} />
                     <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Preview</p>
                   </div>
                 )}

@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
+import { EngravableTag } from '@/components/ui/EngravableTag'
 import type { Product, ProductVariant } from '@/lib/site-data'
 
 const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
@@ -194,8 +195,9 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
                   onMouseEnter={e => { ;(e.currentTarget as HTMLElement).style.transform = 'translateY(-3px)'; (e.currentTarget as HTMLElement).style.boxShadow = '0 12px 32px rgba(0,0,0,0.1)' }}
                   onMouseLeave={e => { ;(e.currentTarget as HTMLElement).style.transform = ''; (e.currentTarget as HTMLElement).style.boxShadow = '0 4px 16px rgba(0,0,0,0.05)' }}
                 >
-                  <div style={{ aspectRatio: '1/1', overflow: 'hidden', background: 'var(--beige)' }}>
+                  <div style={{ aspectRatio: '1/1', overflow: 'hidden', background: 'var(--beige)', position: 'relative' }}>
                     <img src={product.image} alt={product.name} loading="lazy" decoding="async" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                    {product.customizable && <EngravableTag overlay />}
                   </div>
                   <div style={{ padding: '10px 12px 12px' }}>
                     <p style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--ink)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{product.name}</p>

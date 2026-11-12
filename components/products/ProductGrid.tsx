@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product } from '@/lib/site-data'
 import { showsSaleTag } from '@/lib/sale'
+import { EngravableTag } from '@/components/ui/EngravableTag'
 
 const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
 const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings', 'Engravable']
@@ -49,6 +50,7 @@ function ProductCard({ product, index, startOpen = false }: {
             loading={index < 4 ? 'eager' : 'lazy'}
             decoding="async"
           />
+          {product.customizable && <EngravableTag overlay />}
         </div>
 
         <div className="mini-body">

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product, ProductVariant } from '@/lib/site-data'
 import { showsSaleTag } from '@/lib/sale'
+import { EngravableTag } from '@/components/ui/EngravableTag'
 
 interface BestSellersGridProps {
   /** lib/catalog.ts bestSellers(): the products NOMA features in the portal, or the first six. */
@@ -66,6 +67,7 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
                   loading={i < 2 ? 'eager' : 'lazy'}
                   decoding="async"
                 />
+                {product.customizable && <EngravableTag overlay />}
               </div>
               <div className="mini-body">
                 {badge && (

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
+import type { EngravingShape } from '@/lib/engraving-shapes'
 
 export type FontKey = 'clean' | 'elegant' | 'classic'
 
@@ -72,6 +73,47 @@ export const ENGRAVING_MAX_CHARS = 10
 const MAX_FONT_SIZE  = 96
 const BASE_TAG_WIDTH = 400
 
+/**
+ * The surfaces a piece can be engraved on. `box` is where the text goes, as a share
+ * of the preview; `fit` is how much of the preview's width the text may use. A new
+ * shape is a blank photo in `public/`, an entry here, and the product's id in
+ * `lib/engraving-shapes.ts`.
+ */
+interface ShapeDef {
+  src: string
+  alt: string
+  /** CSS width of the whole preview. */
+  width: string
+  /** Space around the photo, inside the preview. */
+  padding: string
+  box: { top: string; left: string; width: string; height: string }
+  fit: number
+}
+
+export const SHAPES: Record<EngravingShape, ShapeDef> = {
+  // The rectangular bar (Paris Bracelet). Positions tuned to the photo.
+  bar: {
+    src: '/BlankTAGnoBackground.png',
+    alt: 'Engraving bar',
+    width: 'min(400px, 100%)',
+    padding: '20px',
+    box: { top: '11.14%', left: 'calc(5.25% + 2px)', width: '72%', height: '76.58%' },
+    fit: 0.68,
+  },
+  // The round disc (Alaina Necklace). A circle is narrowest at its edges, so the
+  // text gets a smaller share of the width than on the bar.
+  disc: {
+    src: '/BlankDiscNoBackground.png',
+    alt: 'Engraving disc',
+    width: 'min(260px, 100%)',
+    padding: '0',
+    box: { top: '12%', left: '12%', width: '76%', height: '76%' },
+    fit: 0.56,
+  },
+}
+
+export const SHAPE_LABELS: Record<EngravingShape, string> = { bar: 'Bar', disc: 'Round disc' }
+
 // Measure text width via canvas (system font proxy + safety margin for web font differences).
 // Much more reliable than DOM scrollWidth inside a flex container.
 const canvas = typeof window !== 'undefined' ? document.createElement('canvas') : null
@@ -92,7 +134,8 @@ function measureText(text: string, fontSize: number, def: FontDef): number {
  * The tag image with the shopper's text laid on it, sized to fit. Used by the
  * Engraving section below and by the product popup's "See how it looks".
  */
-export function EngravingTag({ text, font, flat = false }: { text: string; font: FontKey; flat?: boolean }) {
+export function EngravingTag({ text, font, flat = false, shape = 'bar' }: { text: string; font: FontKey; flat?: boolean; shape?: EngravingShape }) {
+  const shapeDef = SHAPES[shape]
   // `flat` drops the photo's drop-shadow and the text's multiply blend. Inside the
   // product popup (a scrolling box that resizes when the preview opens or the
   // font changes) iOS Safari painted the photo only half-way down with them on,
@@ -114,8 +157,9 @@ export function EngravingTag({ text, font, flat = false }: { text: string; font:
     // while long text ("WWWWWWWWWW") scales down proportionally.
     let size = Math.max(12, Math.round(MAX_FONT_SIZE * (containerWidth / BASE_TAG_WIDTH)) + def.sizeOffset)
 
-    // Usable width = 68% of container (overlay is 72% wide; inner margin keeps text off the right edge)
-    const availableWidth = containerWidth * 0.68
+    // Usable width: a share of the container (the text box is a little wider; the
+    // margin keeps text off the edge, and off the curve on a disc).
+    const availableWidth = containerWidth * shapeDef.fit
 
     const measured = measureText(displayText, size, def)
     if (measured > availableWidth) {
@@ -127,7 +171,7 @@ export function EngravingTag({ text, font, flat = false }: { text: string; font:
     }
 
     setScaledFontSize(size)
-  }, [font, displayText])
+  }, [font, displayText, shapeDef])
 
   useEffect(() => {
     computeFontSize()
@@ -146,15 +190,15 @@ export function EngravingTag({ text, font, flat = false }: { text: string; font:
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '20px',
-        width: 'min(400px, 100%)',
+        padding: shapeDef.padding,
+        width: shapeDef.width,
         maxWidth: '100%',
         boxSizing: 'border-box',
       }}
     >
       <img
-        src="/BlankTAGnoBackground.png"
-        alt="Jewelry Tag"
+        src={shapeDef.src}
+        alt={shapeDef.alt}
         style={{
           width: '100%',
           height: 'auto',
@@ -164,10 +208,10 @@ export function EngravingTag({ text, font, flat = false }: { text: string; font:
       <div
         style={{
           position: 'absolute',
-          top: '11.14%',
-          left: 'calc(5.25% + 2px)',
-          width: '72%',
-          height: '76.58%',
+          top: shapeDef.box.top,
+          left: shapeDef.box.left,
+          width: shapeDef.box.width,
+          height: shapeDef.box.height,
           textAlign: 'center',
           pointerEvents: 'none',
           display: 'flex',
@@ -212,6 +256,7 @@ interface EngravingPreviewProps {
 export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewProps) {
   const [text, setText] = useState('')
   const [font, setFont] = useState<FontKey>('clean')
+  const [shape, setShape] = useState<EngravingShape>('bar')
 
   const activeFont  = FONTS[font]
 
@@ -323,11 +368,42 @@ export function EngravingPreview({ eyebrow, headline, lede }: EngravingPreviewPr
               })}
             </div>
           </div>
+          {/* Shape picker */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <p style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--ink)', margin: 0 }}>Shape</p>
+            <div role="radiogroup" aria-label="Engraving shape" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              {(Object.keys(SHAPES) as EngravingShape[]).map((key) => {
+                const isActive = shape === key
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    onClick={() => setShape(key)}
+                    style={{
+                      padding: '10px 18px',
+                      borderRadius: '12px',
+                      border: isActive ? '1.5px solid var(--accent)' : '1px solid var(--border)',
+                      background: isActive ? 'var(--beige)' : 'white',
+                      cursor: 'pointer',
+                      fontFamily: 'inherit',
+                      fontSize: '0.8rem',
+                      color: isActive ? 'var(--ink)' : 'var(--muted)',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    {SHAPE_LABELS[key]}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Right: live preview */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '14px', width: '100%', minWidth: 0 }}>
-          <EngravingTag text={text} font={font} />
+          <EngravingTag text={text} font={font} shape={shape} />
           <p style={{ fontSize: '0.8rem', color: 'var(--muted)', letterSpacing: '0.04em', margin: 0, textAlign: 'center' }}>
             Preview
           </p>
