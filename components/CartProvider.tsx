@@ -32,6 +32,11 @@ interface CartContextValue {
   addItem: (item: Omit<CartItem, 'qty'>) => void
   /** `key` is a line's `lineKey`, not its product id. */
   updateQty: (key: string, delta: number) => void
+  /**
+   * Swap one line for another (a different option, engraving or font) keeping its
+   * quantity. If the new line matches a line already in the cart the two merge.
+   */
+  replaceItem: (key: string, item: Omit<CartItem, 'qty'>) => void
   /** Take the server's current prices into the cart (checkout's "your total changed" answer). */
   repriceItems: (prices: { id: string; unitCents: number }[]) => void
   /** Empty the cart. Call ONLY after a payment is confirmed settled. */
@@ -43,6 +48,7 @@ const CartContext = createContext<CartContextValue>({
   items: [],
   addItem: () => {},
   updateQty: () => {},
+  replaceItem: () => {},
   repriceItems: () => {},
   clearCart: () => {},
   totalQty: 0,
@@ -110,6 +116,27 @@ export function CartProvider({ children }: { children: ReactNode }) {
     })
   }, [])
 
+  const replaceItem = useCallback((key: string, item: Omit<CartItem, 'qty'>) => {
+    setItems((prev) => {
+      const index = prev.findIndex((i) => lineKey(i) === key)
+      if (index < 0) return prev
+      const qty = prev[index].qty
+      const newKey = lineKey(item)
+      const mergeInto = prev.findIndex((i, n) => n !== index && lineKey(i) === newKey)
+      let next: CartItem[]
+      if (mergeInto >= 0) {
+        // Edited into a line that is already in the cart: one line, both quantities.
+        next = prev
+          .map((i, n) => (n === mergeInto ? { ...i, qty: i.qty + qty } : i))
+          .filter((_, n) => n !== index)
+      } else {
+        next = prev.map((i, n) => (n === index ? { ...item, qty } : i))
+      }
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)) } catch { /* ignore */ }
+      return next
+    })
+  }, [])
+
   /**
    * NOMA sets prices in the portal now, so a price can change while an item
    * sits in someone's cart. The cart's copy is display-only (checkout re-prices
@@ -152,7 +179,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const totalQty = items.reduce((sum, i) => sum + i.qty, 0)
 
   return (
-    <CartContext.Provider value={{ items, addItem, updateQty, repriceItems, clearCart, totalQty }}>
+    <CartContext.Provider value={{ items, addItem, updateQty, replaceItem, repriceItems, clearCart, totalQty }}>
       {children}
     </CartContext.Provider>
   )

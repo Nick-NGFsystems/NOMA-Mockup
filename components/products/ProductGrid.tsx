@@ -3,15 +3,21 @@ import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product } from '@/lib/site-data'
 import { showsSaleTag } from '@/lib/sale'
+import { EngravableTag } from '@/components/ui/EngravableTag'
 
 const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
-const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings', 'Engravable']
+// Engravable is not a type of jewelry but a property of a piece, so it is its own
+// toggle that narrows whatever else is chosen (see `engravableOnly`), not a pill
+// in this row, where pills add to each other.
+const TYPES  = ['Necklaces', 'Earrings', 'Bracelets', 'Rings']
 
 interface ProductGridProps {
   /** From lib/catalog.ts: NOMA's Products list in the portal, or the compiled fallback. */
   products: Product[]
   initialMetals?: string[]
   initialTypes?: string[]
+  /** A product id whose popup should be open when the page loads. */
+  openProductId?: string
 }
 
 type SortKey = 'featured' | 'price-asc' | 'price-desc'
@@ -26,11 +32,12 @@ function parsePrice(p: string) {
 // on screen while checkout charged another, and pointed at the wrong card as
 // soon as the grid was sorted or filtered. Products are edited on the portal's
 // Products page now, which is also what checkout charges from.
-function ProductCard({ product, index }: {
+function ProductCard({ product, index, startOpen = false }: {
   product: Product
   index: number
+  startOpen?: boolean
 }) {
-  const [modalOpen, setModalOpen] = useState(false)
+  const [modalOpen, setModalOpen] = useState(startOpen)
 
   return (
     <>
@@ -46,6 +53,7 @@ function ProductCard({ product, index }: {
             loading={index < 4 ? 'eager' : 'lazy'}
             decoding="async"
           />
+          {product.customizable && <EngravableTag overlay />}
         </div>
 
         <div className="mini-body">
@@ -126,9 +134,11 @@ function ProductCard({ product, index }: {
 }
 
 // ── Main grid component ───────────────────────────────────────────────────────
-export function ProductGrid({ products, initialMetals = [], initialTypes = [] }: ProductGridProps) {
+export function ProductGrid({ products, initialMetals = [], initialTypes = [], openProductId }: ProductGridProps) {
   const [activeMetals, setActiveMetals] = useState<Set<string>>(new Set(initialMetals))
-  const [activeTypes,  setActiveTypes]  = useState<Set<string>>(new Set(initialTypes))
+  // `?types=Engravable` (an old link) still works: it turns the toggle on.
+  const [activeTypes,  setActiveTypes]  = useState<Set<string>>(new Set(initialTypes.filter((t) => t !== 'Engravable')))
+  const [engravableOnly, setEngravableOnly] = useState(initialTypes.includes('Engravable'))
   const [sort,  setSort]  = useState<SortKey>('featured')
   const [filtersOpen, setFiltersOpen] = useState(initialMetals.length > 0 || initialTypes.length > 0)
 
@@ -142,10 +152,9 @@ export function ProductGrid({ products, initialMetals = [], initialTypes = [] }:
     const metalMatch = activeMetals.size === 0 || [...activeMetals].some((m) =>
       p.metals?.some((metal) => metal.toLowerCase() === m.toLowerCase())
     )
-    const typeMatch = activeTypes.size === 0 || [...activeTypes].some((t) =>
-      t === 'Engravable' ? p.customizable === true : p.category === t
-    )
-    return metalMatch && typeMatch
+    const typeMatch = activeTypes.size === 0 || [...activeTypes].some((t) => p.category === t)
+    const engravableMatch = !engravableOnly || p.customizable === true
+    return metalMatch && typeMatch && engravableMatch
   })
 
   const sorted = [...filtered].sort((a, b) => {
@@ -186,8 +195,8 @@ export function ProductGrid({ products, initialMetals = [], initialTypes = [] }:
     whiteSpace: 'nowrap',
   })
 
-  const hasFilters = activeMetals.size > 0 || activeTypes.size > 0
-  const filterCount = activeMetals.size + activeTypes.size
+  const hasFilters = activeMetals.size > 0 || activeTypes.size > 0 || engravableOnly
+  const filterCount = activeMetals.size + activeTypes.size + (engravableOnly ? 1 : 0)
 
   return (
     <>
@@ -235,7 +244,7 @@ export function ProductGrid({ products, initialMetals = [], initialTypes = [] }:
           </span>
           {hasFilters && (
             <button
-              onClick={() => { setActiveMetals(new Set()); setActiveTypes(new Set()) }}
+              onClick={() => { setActiveMetals(new Set()); setActiveTypes(new Set()); setEngravableOnly(false) }}
               style={{ fontSize: '0.7rem', color: 'var(--accent)', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0, whiteSpace: 'nowrap' }}
             >
               Clear
@@ -260,6 +269,18 @@ export function ProductGrid({ products, initialMetals = [], initialTypes = [] }:
                 {TYPES.map((t) => (
                   <button key={t} style={pillStyle(activeTypes.has(t))} onClick={() => toggleType(t)}>{t}</button>
                 ))}
+              </div>
+            </div>
+            <div className="category-group">
+              <p className="eyebrow" style={{ marginBottom: '12px' }}>Engraving</p>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  style={pillStyle(engravableOnly)}
+                  aria-pressed={engravableOnly}
+                  onClick={() => setEngravableOnly((v) => !v)}
+                >
+                  Engravable only
+                </button>
               </div>
             </div>
           </div>
@@ -292,7 +313,7 @@ export function ProductGrid({ products, initialMetals = [], initialTypes = [] }:
             </span>
             {hasFilters && (
               <button
-                onClick={() => { setActiveMetals(new Set()); setActiveTypes(new Set()) }}
+                onClick={() => { setActiveMetals(new Set()); setActiveTypes(new Set()); setEngravableOnly(false) }}
                 style={{ fontSize: '0.75rem', color: 'var(--accent)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0, letterSpacing: '0.04em' }}
               >
                 Clear ×
@@ -309,6 +330,7 @@ export function ProductGrid({ products, initialMetals = [], initialTypes = [] }:
             key={product.id}
             product={product}
             index={i}
+            startOpen={product.id === openProductId}
           />
         ))}
 

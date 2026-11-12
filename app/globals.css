@@ -297,6 +297,7 @@
   background: #f5f1ec;
   overflow: hidden;
   height: 200px;
+  position: relative;
 }
 
 .mini-image img {
@@ -340,6 +341,31 @@
   background: var(--burgundy);
   padding: 4px 8px;
   border-radius: 999px;
+}
+
+.engravable-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--border);
+  padding: 4px 9px;
+  border-radius: 999px;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.engravable-tag--overlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* ── Testimonial cards ── */
