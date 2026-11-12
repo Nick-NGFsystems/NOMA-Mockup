@@ -100,15 +100,17 @@ export const SHAPES: Record<EngravingShape, ShapeDef> = {
     box: { top: '11.14%', left: 'calc(5.25% + 2px)', width: '72%', height: '76.58%' },
     fit: 0.68,
   },
-  // The round disc (Alaina Necklace). A circle is narrowest at its edges, so the
-  // text gets a smaller share of the width than on the bar.
+  // The round disc (Alaina Necklace). Text sits on the middle line, where a circle
+  // is widest, so it can use most of the width: on Mary's real engraved disc
+  // ("ALAINA") the word spans about 85% of the disc's width. Longer text shrinks to
+  // fit, and its corners stay inside the circle (checked for ten wide letters).
   disc: {
     src: '/BlankDiscNoBackground.png',
     alt: 'Engraving disc',
     width: 'min(260px, 100%)',
     padding: '0',
-    box: { top: '12%', left: '12%', width: '76%', height: '76%' },
-    fit: 0.56,
+    box: { top: '12%', left: '3%', width: '94%', height: '76%' },
+    fit: 0.92,
   },
 }
 
