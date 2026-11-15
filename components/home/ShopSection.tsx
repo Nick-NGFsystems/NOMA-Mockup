@@ -2,26 +2,24 @@
 import { useState } from 'react'
 import { BestSellersGrid } from './BestSellersGrid'
 import { ShopByCategory } from './ShopByCategory'
-import { getItems } from '@/lib/ngf'
-import type { Product, Bundle } from '@/lib/site-data'
-import type { NgfSiteContent } from '@/lib/ngf'
+import { BundleGrid } from '@/components/products/BundleGrid'
+import type { Product } from '@/lib/site-data'
 
 type Tab = 'bestsellers' | 'bundles'
 
 interface ShopSectionProps {
   bestSellers: Product[]
   products: Product[]
-  bundles: Bundle[]
-  content: NgfSiteContent
+  /** Products with the category "Bundles" (see lib/catalog.ts). No bundles, no tab. */
+  bundles: Product[]
 }
 
-export function ShopSection({ bestSellers, products, bundles, content }: ShopSectionProps) {
+export function ShopSection({ bestSellers, products, bundles }: ShopSectionProps) {
   const [activeTab, setActiveTab]   = useState<Tab>('bestsellers')
-  const bundleItems = getItems(content, 'bundles.items')
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'bestsellers', label: 'Best Sellers' },
-    { id: 'bundles',     label: 'Bundles'      },
+    ...(bundles.length > 0 ? [{ id: 'bundles' as Tab, label: 'Bundles' }] : []),
   ]
 
   const tabStyle = (id: Tab): React.CSSProperties => ({
@@ -49,7 +47,8 @@ export function ShopSection({ bestSellers, products, bundles, content }: ShopSec
         <h2 style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center' }}>Find your perfect piece.</h2>
       </div>
 
-      {/* Tab bar */}
+      {/* Tab bar: with no bundles there is only Best Sellers, so no bar. */}
+      {tabs.length > 1 && (
       <div style={{
         display: 'flex',
         justifyContent: 'center',
@@ -68,6 +67,7 @@ export function ShopSection({ bestSellers, products, bundles, content }: ShopSec
           </button>
         ))}
       </div>
+      )}
 
       {/* Tab content */}
       <div key={activeTab} style={{ animation: 'tabFade 200ms ease' }}>
@@ -88,41 +88,7 @@ export function ShopSection({ bestSellers, products, bundles, content }: ShopSec
           )
         )}
 
-        {activeTab === 'bundles' && (
-          <div
-            style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}
-            data-ngf-group="bundles.items"
-            data-ngf-item-label="Bundle"
-            data-ngf-min-items="1"
-            data-ngf-max-items="8"
-            data-ngf-item-fields='[{"key":"badge","label":"Badge","type":"text"},{"key":"name","label":"Bundle Name","type":"text"},{"key":"description","label":"Description","type":"textarea"},{"key":"price","label":"Price","type":"text"},{"key":"comparePrice","label":"Compare Price","type":"text"}]'
-          >
-            {bundles.map((bundle, i) => {
-              const bi          = bundleItems[i] ?? {}
-              const name        = bi.name         || bundle.name
-              const description = bi.description  || bundle.description
-              const price       = bi.price        || bundle.price
-              const comparePrice = bi.comparePrice || bundle.comparePrice
-              const badge       = bi.badge        || bundle.badge
-              return (
-                <article key={bundle.id} className="bundle-card">
-                  {badge && (
-                    <span className="bundle-badge"
-                      data-ngf-field={`bundles.items.${i}.badge`}
-                      data-ngf-label="Badge" data-ngf-type="text" data-ngf-section="Bundles"
-                    >{badge}</span>
-                  )}
-                  <h3 data-ngf-field={`bundles.items.${i}.name`} data-ngf-label="Bundle Name" data-ngf-type="text" data-ngf-section="Bundles">{name}</h3>
-                  <p data-ngf-field={`bundles.items.${i}.description`} data-ngf-label="Description" data-ngf-type="textarea" data-ngf-section="Bundles">{description}</p>
-                  <div className="price-row">
-                    <span className="price" data-ngf-field={`bundles.items.${i}.price`} data-ngf-label="Price" data-ngf-type="text" data-ngf-section="Bundles">{price}</span>
-                    <span className="price-compare" data-ngf-field={`bundles.items.${i}.comparePrice`} data-ngf-label="Compare Price" data-ngf-type="text" data-ngf-section="Bundles">{comparePrice}</span>
-                  </div>
-                </article>
-              )
-            })}
-          </div>
-        )}
+        {activeTab === 'bundles' && bundles.length > 0 && <BundleGrid bundles={bundles} />}
       </div>
 
       {/* Shop All CTA */}

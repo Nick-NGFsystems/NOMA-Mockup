@@ -1,8 +1,8 @@
 import type { Metadata } from 'next'
 import { getNgfContent } from '@/lib/ngf'
-import { BUNDLES } from '@/lib/site-data'
-import { getCatalog } from '@/lib/catalog'
+import { getCatalog, splitBundles } from '@/lib/catalog'
 import { ProductGrid } from '@/components/products/ProductGrid'
+import { BundleGrid } from '@/components/products/BundleGrid'
 import { EngravingPreview } from '@/components/products/EngravingPreview'
 
 export const metadata: Metadata = {
@@ -17,6 +17,8 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
   // /products?product=<id> opens that product's popup (the cart's "View product" link).
   const openProductId = params.product || undefined
   const [content, catalog] = await Promise.all([getNgfContent(), getCatalog()])
+  // Bundles are products with the category "Bundles": their own section, not shop pieces.
+  const { pieces, bundles } = splitBundles(catalog.products)
 
   const productsEyebrow = content['products.eyebrow'] || 'The NOMA Edit'
   const productsLede =
@@ -59,31 +61,35 @@ export default async function ProductsPage({ searchParams }: { searchParams: Pro
 
       {/* ── Product grid ── */}
       <div className="products-grid-wrapper">
-        <ProductGrid products={catalog.products} initialMetals={initialMetals} initialTypes={initialTypes} openProductId={openProductId} />
+        <ProductGrid products={pieces} initialMetals={initialMetals} initialTypes={initialTypes} openProductId={openProductId} />
       </div>
 
-      {/* ── Bundles ── */}
-      <section className="section bundles" id="bundles">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
-          <p className="eyebrow">{bundlesEyebrow}</p>
-          <h2>{bundlesHeadline}</h2>
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '18px' }}>
-          {BUNDLES.map((bundle) => (
-            <article key={bundle.id} className="bundle-card">
-              {bundle.badge && (
-                <span className="bundle-badge">{bundle.badge}</span>
-              )}
-              <h3>{bundle.name}</h3>
-              <p>{bundle.description}</p>
-              <div className="price-row">
-                <span className="price">{bundle.price}</span>
-                <span className="price-compare">{bundle.comparePrice}</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
+      {/* ── Bundles ──
+          From the Products page (category "Bundles"). No bundles, no section. */}
+      {bundles.length > 0 && (
+        <section className="section bundles" id="bundles">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '28px' }}>
+            <p
+              className="eyebrow"
+              data-ngf-field="bundles.eyebrow"
+              data-ngf-label="Bundles Eyebrow"
+              data-ngf-type="text"
+              data-ngf-section="Bundles"
+            >
+              {bundlesEyebrow}
+            </p>
+            <h2
+              data-ngf-field="bundles.headline"
+              data-ngf-label="Bundles Headline"
+              data-ngf-type="text"
+              data-ngf-section="Bundles"
+            >
+              {bundlesHeadline}
+            </h2>
+          </div>
+          <BundleGrid bundles={bundles} openProductId={openProductId} />
+        </section>
+      )}
 
       {/* ── Engraving ── */}
       <section

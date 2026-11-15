@@ -9,9 +9,10 @@ interface HeaderProps {
   announcementText: string
   /** False until a real review is published: the section is hidden, so is its link. */
   showReviews: boolean
+  showBundles: boolean
 }
 
-export function Header({ announcementText, showReviews }: HeaderProps) {
+export function Header({ announcementText, showReviews, showBundles }: HeaderProps) {
   const [navOpen, setNavOpen]       = useState(false)
   const [visible, setVisible]       = useState(true)
   const [activeHref, setActiveHref] = useState('')
@@ -69,7 +70,8 @@ export function Header({ announcementText, showReviews }: HeaderProps) {
       pathname === '/products'
         ? [
             { id: 'shop',      href: '/products' },
-            { id: 'bundles',   href: '/products#bundles' },
+            // The Bundles section is absent without bundles; a missing id is skipped below.
+            ...(showBundles ? [{ id: 'bundles', href: '/products#bundles' }] : []),
             { id: 'engraving', href: '/products#engraving' },
           ]
         : [
@@ -101,7 +103,7 @@ export function Header({ announcementText, showReviews }: HeaderProps) {
     update()
     window.addEventListener('scroll', update, { passive: true })
     return () => window.removeEventListener('scroll', update)
-  }, [pathname, showReviews])
+  }, [pathname, showReviews, showBundles])
 
   // ── Close nav on Escape ──────────────────────────────────────────────────
   useEffect(() => {
@@ -120,7 +122,7 @@ export function Header({ announcementText, showReviews }: HeaderProps) {
     { href: '/#home',              label: 'Home' },
     ...(showReviews ? [{ href: '/#reviews', label: 'Reviews' }] : []),
     { href: '/products#engraving', label: 'Engraving' },
-    { href: '/products#bundles',   label: 'Bundles' },
+    ...(showBundles ? [{ href: '/products#bundles', label: 'Bundles' }] : []),
     { href: '/products',           label: 'Shop All' },
   ]
 

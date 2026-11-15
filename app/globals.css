@@ -409,38 +409,6 @@ html[data-ngf-edit='true'] .testimonial-card.ngf-editor-only::before {
   color: var(--muted);
 }
 
-/* ── Bundle cards ── */
-.bundle-card {
-  background: #ffffff;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  padding: 24px;
-  display: grid;
-  gap: 12px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.06);
-  transition: box-shadow 200ms ease, transform 200ms ease;
-}
-
-.bundle-card:hover {
-  box-shadow: 0 20px 56px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.bundle-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: fit-content;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: rgba(139, 47, 57, 0.1);
-  color: var(--burgundy);
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-}
-
 /* ── Category groups ── */
 .category-groups {
   display: grid;

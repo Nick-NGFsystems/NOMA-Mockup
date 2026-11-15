@@ -35,15 +35,6 @@ export interface Product {
   featured?: boolean
 }
 
-export interface Bundle {
-  id: string
-  name: string
-  description: string
-  price: string
-  comparePrice: string
-  badge: string
-}
-
 export interface Review {
   id: string
   quote: string
@@ -198,25 +189,6 @@ export const FALLBACK_PRODUCTS: NgfProduct[] = [
     tags: ['Gold'],
     badge: null,
     featured: false,
-  },
-]
-
-export const BUNDLES: Bundle[] = [
-  {
-    id: 'mary-bundle',
-    name: 'Mary Bundle',
-    description: 'Includes Mary Turquoise necklace and Bracelet.',
-    price: '$79.99',
-    comparePrice: '',
-    badge: '',
-  },
-  {
-    id: 'sheri-bundle',
-    name: 'Sheri Bundle',
-    description: 'Includes Sheri necklace and bracelet.',
-    price: '$79.99',
-    comparePrice: '',
-    badge: '',
   },
 ]
 
