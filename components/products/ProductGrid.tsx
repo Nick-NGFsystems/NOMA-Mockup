@@ -32,7 +32,7 @@ function parsePrice(p: string) {
 // on screen while checkout charged another, and pointed at the wrong card as
 // soon as the grid was sorted or filtered. Products are edited on the portal's
 // Products page now, which is also what checkout charges from.
-function ProductCard({ product, index, startOpen = false }: {
+export function ProductCard({ product, index, startOpen = false }: {
   product: Product
   index: number
   startOpen?: boolean

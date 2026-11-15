@@ -7,6 +7,7 @@ import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { getNgfContent } from '@/lib/ngf'
 import { hasLiveReviews } from '@/lib/reviews'
+import { getCatalog, isBundle } from '@/lib/catalog'
 
 const cormorant = Cormorant_Garamond({
   variable: '--font-cormorant',
@@ -163,7 +164,7 @@ const jsonLd = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const content = await getNgfContent()
+  const [content, catalog] = await Promise.all([getNgfContent(), getCatalog()])
 
   const announcementText =
     content['brand.announcementText'] ||
@@ -172,6 +173,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const footerTagline = content['brand.footerTagline'] || 'Fine jewelry, crafted with care.'
   // The Reviews links follow the section: shown once a real review is published.
   const showReviews = hasLiveReviews(content)
+  // So do the Bundles links: shown once a product with the category "Bundles" exists.
+  const showBundles = catalog.products.some(isBundle)
 
   return (
     <html lang="en">
@@ -188,9 +191,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </a>
         <NgfEditBridge />
         <CartProvider>
-<Header announcementText={announcementText} showReviews={showReviews} />
+<Header announcementText={announcementText} showReviews={showReviews} showBundles={showBundles} />
           <div id="main-content" style={{ paddingTop: 'calc(var(--banner-height) + var(--header-height))' }}>{children}</div>
-          <Footer tagline={footerTagline} showReviews={showReviews} />
+          <Footer tagline={footerTagline} showReviews={showReviews} showBundles={showBundles} />
         </CartProvider>
       </body>
     </html>

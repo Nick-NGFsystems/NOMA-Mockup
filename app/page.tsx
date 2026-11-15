@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getNgfContent } from '@/lib/ngf'
-import { BUNDLES } from '@/lib/site-data'
-import { getCatalog, bestSellers } from '@/lib/catalog'
+import { getCatalog, bestSellers, splitBundles } from '@/lib/catalog'
 import { getReviewCards } from '@/lib/reviews'
 import { ShopSection } from '@/components/home/ShopSection'
 
@@ -13,6 +12,8 @@ export const metadata: Metadata = {
 
 export default async function HomePage() {
   const [content, catalog] = await Promise.all([getNgfContent(), getCatalog()])
+  // Bundles (products with the category "Bundles") have their own tab; the rest is the shop.
+  const { pieces, bundles } = splitBundles(catalog.products)
   // Only real reviews reach visitors; the placeholders stay editor-only (lib/reviews.ts).
   const reviews = getReviewCards(content)
   const reviewsLive = reviews.some((review) => review.live)
@@ -130,10 +131,9 @@ export default async function HomePage() {
 
       {/* ── Unified Shop ── */}
       <ShopSection
-        bestSellers={bestSellers(catalog.products)}
-        products={catalog.products}
-        bundles={BUNDLES}
-        content={content}
+        bestSellers={bestSellers(pieces)}
+        products={pieces}
+        bundles={bundles}
       />
 
       {/* ── Reviews ──

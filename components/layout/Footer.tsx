@@ -5,9 +5,10 @@ interface FooterProps {
   tagline: string
   /** False until a real review is published: the section is hidden, so is its link. */
   showReviews: boolean
+  showBundles: boolean
 }
 
-export function Footer({ tagline, showReviews }: FooterProps) {
+export function Footer({ tagline, showReviews, showBundles }: FooterProps) {
   return (
     <footer className="border-t border-[var(--border)] bg-[var(--panel)] mt-24">
       <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row items-center md:items-start gap-8 justify-between">
@@ -36,7 +37,9 @@ export function Footer({ tagline, showReviews }: FooterProps) {
           <Link href="/products" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Shop All</Link>
           <Link href="/#best-sellers" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Best Sellers</Link>
           <Link href="/#collections" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Collections</Link>
-          <Link href="/products#bundles" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Bundles</Link>
+          {showBundles && (
+            <Link href="/products#bundles" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Bundles</Link>
+          )}
           {showReviews && (
             <Link href="/#reviews" className="text-sm text-[var(--muted)] hover:text-[var(--ink)] transition-colors">Reviews</Link>
           )}

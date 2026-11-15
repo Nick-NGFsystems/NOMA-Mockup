@@ -28,6 +28,20 @@ export async function getCatalog(options: { fresh?: boolean } = {}): Promise<Cat
   }
 }
 
+/**
+ * A bundle is an ordinary product on the portal's Products page whose category is
+ * "Bundles" (or "Bundle"). That is the whole feature: it is priced, sold, put in a
+ * cart and charged by the same code as any piece, and NOMA adds, changes and
+ * removes bundles on the Products page. The site only sorts them: bundles go in
+ * the Bundles section, the pieces in the shop grid, so a bundle is not a "piece"
+ * in the shop's count and filters.
+ */
+export const isBundle = (p: Product): boolean => /^bundles?$/i.test((p.category ?? '').trim())
+
+export function splitBundles(products: Product[]): { pieces: Product[]; bundles: Product[] } {
+  return { pieces: products.filter((p) => !isBundle(p)), bundles: products.filter(isBundle) }
+}
+
 /** "$39", or "$39.50" when there are cents. */
 export function displayPrice(cents: number): string {
   const dollars = cents / 100
