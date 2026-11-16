@@ -6,10 +6,10 @@ _Last updated 2026-11-16. Overwrite, don't append; git keeps the history._
 
 **In flight:** nothing. Promo codes are researched, not built (plan in CLAUDE.md): Mary wants them in the portal, and her answers on what her code gives are the next thing needed.
 
-**Next:** (1) Mary adds her bundles on the Products page (category Bundles), then look at them live. (2) Run `npm run verify-orders -- --dry` locally with the production values. (3) Michigan tax rule in the NGF admin hub's Store settings. (4) Delete the sandbox test orders. (5) Only then a first small real order. (6) Build promo codes once Mary answers.
+**Next:** (1) Mary creates her own bundles on the Products page (category Bundles); then look at them live. (2) Run `npm run verify-orders -- --dry` locally with the production values. (3) Michigan tax rule in the NGF admin hub's Store settings. (4) Delete the sandbox test orders. (5) Only then a first small real order. (6) Build promo codes once Mary answers.
 
 **Waiting on Nick:** `NEXT_PUBLIC_SITE_URL` in Vercel; Framework Preset to Next.js; the order-notification email in Store settings.
 
-**Waiting on NOMA:** her bundles (pieces, prices, regular prices; is there a Mary bracelet?); tax rate; what her promo code gives (percent, amount or free shipping), minimum spend, expiry or use limit; what each piece's engraving fits (max length, now 10); whether the three fonts are real choices.
+**Waiting on NOMA:** creating her own bundles on the Products page (nothing for us to enter); tax rate; what her promo code gives (percent, amount or free shipping), minimum spend, expiry or use limit; what each piece's engraving fits (max length, now 10); whether the three fonts are real choices.
 
 **Open PRs:** none.
