@@ -13,9 +13,35 @@ export interface PieceDraft {
 
 export const pieceKey = (id: string, unit: number) => `${id}#${unit}`
 
-/** Every unit of every piece, in the bundle's order. */
+/** Every unit of every shop piece, in the bundle's order. Extras have nothing to choose. */
 export function pieceUnits(pieces: NgfBundlePiece[]): { piece: NgfBundlePiece; unit: number }[] {
-  return pieces.flatMap((piece) => Array.from({ length: piece.quantity }, (_, i) => ({ piece, unit: i + 1 })))
+  return pieces
+    .filter((piece) => !piece.extra)
+    .flatMap((piece) => Array.from({ length: piece.quantity }, (_, i) => ({ piece, unit: i + 1 })))
+}
+
+/** "Also includes": the extras a bundle holds, with their photo when there is one. Nothing to choose. */
+export function BundleExtras({ extras }: { extras: NgfBundlePiece[] }) {
+  if (extras.length === 0) return null
+  return (
+    <div>
+      <p style={{ ...label, margin: '0 0 6px' }}>Also includes</p>
+      <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {extras.map((extra) => (
+          <li key={extra.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.88rem', color: 'var(--ink)' }}>
+            {extra.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={extra.image} alt="" style={{ width: '32px', height: '32px', borderRadius: '7px', objectFit: 'cover', background: 'var(--beige)', flexShrink: 0 }} />
+            ) : null}
+            <span>
+              {extra.name}
+              {extra.quantity > 1 ? ` × ${extra.quantity}` : ''}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }
 
 const fontKeyFor = (label: string): FontKey =>

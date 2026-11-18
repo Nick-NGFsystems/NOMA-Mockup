@@ -6,8 +6,8 @@ import type { ProductVariant } from '@/lib/site-data'
 import { EngravingTag, ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
 import { EngravableTag } from '@/components/ui/EngravableTag'
 import { resolveEngravingShape } from '@/lib/engraving-shapes'
-import { checkBundleChoices, renderBundleChoices, type BundlePieceChoice, type NgfBundlePiece } from '@/lib/ngf-bundles'
-import { BundlePieceFields, draftsToChoices, initialDrafts, type PieceDraft } from '@/components/products/BundlePieceFields'
+import { bundleExtras, checkBundleChoices, hasChoosablePieces, renderBundleChoices, type BundlePieceChoice, type NgfBundlePiece } from '@/lib/ngf-bundles'
+import { BundleExtras, BundlePieceFields, draftsToChoices, initialDrafts, type PieceDraft } from '@/components/products/BundlePieceFields'
 
 interface ProductModalProps {
   productId: string
@@ -113,14 +113,15 @@ export function ProductModal({
   const selectedLabel = hasVariants ? variants![selectedVariant].size : null
   const hasEngravedOption = Boolean(variants?.some((v) => isEngravedOption(v.size)))
   // A bundle made of pieces is engraved piece by piece (below), never as a whole.
-  const isPieceBundle = Boolean(includes && includes.length > 0)
+  const isPieceBundle = hasChoosablePieces(includes)
+  const extras = bundleExtras(includes)
   const showEngraving =
     !isPieceBundle && customizable && (!hasEngravedOption || (selectedLabel !== null && isEngravedOption(selectedLabel)))
   const engravingRequired = showEngraving && hasEngravedOption
   const maxChars = engravingMaxChars ?? ENGRAVING_MAX_CHARS
 
   const [pieceDrafts, setPieceDrafts] = useState<Record<string, PieceDraft>>(() =>
-    includes && includes.length > 0 ? initialDrafts(includes, initialPieces) : {},
+    includes && isPieceBundle ? initialDrafts(includes, initialPieces) : {},
   )
   const [piecesError, setPiecesError] = useState<string | null>(null)
 
@@ -542,6 +543,7 @@ export function ProductModal({
                 )}
               </>
             )}
+            <BundleExtras extras={extras} />
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>
               <span className="pm-price">{currentPrice}</span>

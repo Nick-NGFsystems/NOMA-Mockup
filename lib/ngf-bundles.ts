@@ -19,8 +19,13 @@
 
 /** One piece of a bundle, as the product feed describes it. */
 export interface NgfBundlePiece {
-  /** The piece's own product handle. */
+  /** The piece's own product handle. For an extra, "extra:1", "extra:2"… */
   id: string
+  /**
+   * An extra item that is not sold in the shop (a gift pouch, a card): shown as
+   * part of what the bundle holds, with nothing to choose. Never engraved.
+   */
+  extra: boolean
   name: string
   image: string | null
   /** How many of this piece the bundle holds, 1 to 5. Each unit is chosen on its own. */
@@ -70,21 +75,31 @@ export function readBundlePieces(raw: unknown): NgfBundlePiece[] | null {
     if (!nonEmpty(p.id) || !nonEmpty(p.name) || seen.has(p.id)) return null
     if (!isInt(p.quantity, 1, MAX_PIECE_QUANTITY)) return null
     seen.add(p.id)
-    const options = Array.isArray(p.options) ? p.options.filter(nonEmpty) : []
+    const extra = p.extra === true
+    const options = !extra && Array.isArray(p.options) ? p.options.filter(nonEmpty) : []
     pieces.push({
       id: p.id,
+      extra,
       name: p.name,
       image: nonEmpty(p.image) ? p.image : null,
       quantity: p.quantity,
       optionLabel: options.length > 0 && nonEmpty(p.optionLabel) ? p.optionLabel : null,
       options,
-      engravable: p.engravable === true,
+      engravable: !extra && p.engravable === true,
       engravingShape: nonEmpty(p.engravingShape) ? p.engravingShape : null,
       engravingMaxChars: isInt(p.engravingMaxChars, 1, 40) ? p.engravingMaxChars : null,
     })
   }
   return pieces
 }
+
+/** True when at least one piece is a shop product, so there is something to choose per piece. */
+export const hasChoosablePieces = (pieces: NgfBundlePiece[] | null | undefined): boolean =>
+  Boolean(pieces && pieces.some((p) => !p.extra))
+
+/** The extras (not sold in the shop) a bundle holds, in order. */
+export const bundleExtras = (pieces: NgfBundlePiece[] | null | undefined): NgfBundlePiece[] =>
+  pieces ? pieces.filter((p) => p.extra) : []
 
 export const engravingLimit = (piece: Pick<NgfBundlePiece, 'engravingMaxChars'>): number =>
   piece.engravingMaxChars ?? DEFAULT_ENGRAVING_MAX_CHARS
@@ -126,7 +141,8 @@ export function checkBundleChoices(bundleName: string, pieces: NgfBundlePiece[],
     if (!c || typeof c !== 'object' || typeof c.id !== 'string') {
       return { ok: false, reason: `We could not read your choices for ${bundleName}.` }
     }
-    const piece = pieces.find((p) => p.id === c.id)
+    // An extra has nothing to choose, so a choice for one is not a choice for a piece in this bundle.
+    const piece = pieces.find((p) => p.id === c.id && !p.extra)
     if (!piece) return { ok: false, reason: `${bundleName} has changed. Please choose its pieces again.` }
     if (!isInt(c.unit, 1, piece.quantity)) {
       return { ok: false, reason: `${bundleName} has changed. Please choose its pieces again.` }
@@ -168,6 +184,7 @@ export function checkBundleChoices(bundleName: string, pieces: NgfBundlePiece[],
 
   const choices: BundlePieceChoice[] = []
   for (const piece of pieces) {
+    if (piece.extra) continue
     for (let unit = 1; unit <= piece.quantity; unit++) {
       const choice = byKey.get(`${piece.id}\u0000${unit}`)
       if (piece.options.length > 0 && !choice?.option) {

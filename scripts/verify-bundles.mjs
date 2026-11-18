@@ -72,7 +72,12 @@ const feed = {
     { id: 'alaina-necklace', name: 'Alaina Necklace', image: '/a.jpg', quantity: 1, optionLabel: 'Length', options: ['16"', '18"'], engravable: true, engravingShape: 'disc', engravingMaxChars: 8 },
     { id: 'paris-bracelet', name: 'Paris Bracelet', image: '/p.jpg', quantity: 2, optionLabel: null, options: [], engravable: true, engravingShape: null, engravingMaxChars: null },
     { id: 'gift-box', name: 'Gift Box', image: null, quantity: 1, optionLabel: null, options: [], engravable: false, engravingShape: null, engravingMaxChars: null },
+    { id: 'extra:1', extra: true, name: 'Gift pouch', image: '/pouch.jpg', quantity: 2, optionLabel: null, options: [], engravable: false, engravingShape: null, engravingMaxChars: null },
   ],
+}
+const extrasOnly = {
+  id: 'pouch-set', name: 'Pouch Set', category: 'Bundles', priceCents: 3000, personalizable: true,
+  includes: [{ id: 'extra:1', extra: true, name: 'Gift pouch', image: null, quantity: 1, options: ['x'], engravable: true }],
 }
 const plain = { id: 'paris-bracelet', name: 'Paris Bracelet', priceCents: 4500, personalizable: true }
 const wordsBundle = { id: 'old-bundle', name: 'Old Bundle', category: 'Bundles', priceCents: 5000, personalizable: true }
@@ -89,7 +94,7 @@ async function catalogFrom(list) {
   }
 }
 
-const catalog = await catalogFrom([feed, plain, wordsBundle])
+const catalog = await catalogFrom([feed, plain, wordsBundle, extrasOnly])
 if (catalog.status !== 'live') throw new Error(`stub catalog not live: ${JSON.stringify(catalog)}; set NGF env vars the way lib/ngf.ts reads them`)
 const list = catalog.products
 const bundle = list.find((p) => p.id === 'mother-daughter-set')
@@ -97,7 +102,7 @@ const pieces = bundle.includes
 
 console.log('\nFeed reading')
 test('a bundle keeps its pieces from the feed', () => {
-  eq(pieces.map((p) => [p.id, p.quantity, p.engravable]), [['alaina-necklace', 1, true], ['paris-bracelet', 2, true], ['gift-box', 1, false]])
+  eq(pieces.map((p) => [p.id, p.quantity, p.engravable, p.extra]), [['alaina-necklace', 1, true, false], ['paris-bracelet', 2, true, false], ['gift-box', 1, false, false], ['extra:1', 2, false, true]])
   eq(pieces[0].engravingShape, 'disc', 'shape')
   eq(pieces[1].engravingMaxChars, null, 'unset max')
 })
@@ -114,6 +119,11 @@ test('readBundlePieces refuses duplicates and bad quantities', () => {
   eq(bundles.readBundlePieces([{ id: 'a', name: 'A', quantity: 1 }, { id: 'a', name: 'A', quantity: 1 }]), null)
   eq(bundles.readBundlePieces([{ id: 'a', name: 'A', quantity: 6 }]), null)
   eq(bundles.readBundlePieces([]), null)
+})
+
+test('an extra never has options or engraving, whatever the feed says', () => {
+  const p = list.find((x) => x.id === 'pouch-set').includes[0]
+  eq([p.extra, p.options, p.engravable], [true, [], false])
 })
 
 console.log('\nChecking choices')
@@ -140,6 +150,9 @@ test('a piece not in the bundle is refused', () => {
 })
 test('a unit past the quantity is refused', () => {
   refused(bundles.checkBundleChoices('Set', pieces, [good[0], { id: 'paris-bracelet', unit: 3, option: null, engraving: null }]), /has changed/)
+})
+test('a choice for an extra is refused (nothing to choose)', () => {
+  refused(bundles.checkBundleChoices('Set', pieces, [good[0], { id: 'extra:1', unit: 1, option: null, engraving: null }]), /has changed/)
 })
 test('the same unit twice is refused', () => {
   refused(bundles.checkBundleChoices('Set', pieces, [good[0], good[0]]), /could not read/)
@@ -207,6 +220,21 @@ test('a bundle described in words behaves as before (one engraving kept)', () =>
 test('a single product behaves as before', () => {
   const r = products.priceCart([{ id: 'paris-bracelet', qty: 1, customization: '  JO (Open Sans) ' }], list)
   eq([r.lines[0].unitCents, r.lines[0].customization, r.lines[0].pieces], [4500, 'JO (Open Sans)', null])
+})
+
+console.log('\nExtra items')
+test('extras stay out of the rendered order text', () => {
+  const r = products.priceCart([{ id: 'mother-daughter-set', qty: 1, pieces: good }], list)
+  eq(r.lines[0].customization.includes('Gift pouch'), false)
+})
+test('a bundle of extras only: nothing per piece, its own engraving box works as before', () => {
+  const r = products.priceCart([{ id: 'pouch-set', qty: 1, customization: 'MA (Open Sans)' }], list)
+  eq([r.ok, r.lines[0].customization, r.lines[0].pieces], [true, 'MA (Open Sans)', null])
+  refused(products.priceCart([{ id: 'pouch-set', qty: 1, pieces: good }], list), /has changed/)
+})
+test('hasChoosablePieces and bundleExtras', () => {
+  eq([bundles.hasChoosablePieces(pieces), bundles.hasChoosablePieces(list.find((x) => x.id === 'pouch-set').includes), bundles.hasChoosablePieces(null)], [true, false, false])
+  eq(bundles.bundleExtras(pieces).map((p) => p.name), ['Gift pouch'])
 })
 
 console.log(`\n${passed} passed, ${failed} failed`)

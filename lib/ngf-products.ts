@@ -1,6 +1,7 @@
 import { ngfEndpoints } from '@/lib/ngf'
 import {
   checkBundleChoices,
+  hasChoosablePieces,
   readBundlePieces,
   renderBundleChoices,
   type BundlePieceChoice,
@@ -277,8 +278,8 @@ export function priceCart(items: CartItemIn[], products: NgfProduct[]): PricedCa
 
     let customization: string | null
     let pieces: BundlePieceChoice[] | null = null
-    if (product.includes) {
-      // A bundle made of pieces: every piece's option and engraving is checked
+    if (hasChoosablePieces(product.includes) && product.includes) {
+      // A bundle made of shop pieces: every piece's option and engraving is checked
       // against the live feed, and anything that does not match refuses the
       // order. The bundle's own price is charged whatever is chosen. A single
       // engraving for the whole bundle is never kept: engraving is per piece.
@@ -287,6 +288,8 @@ export function priceCart(items: CartItemIn[], products: NgfProduct[]): PricedCa
       pieces = checked.choices
       customization = renderBundleChoices(product.includes, checked.choices)
     } else {
+      // Any other product, including a bundle whose only listed items are
+      // extras (nothing to choose; its own engraving box works as before).
       // Choices for pieces this product no longer has (the client removed them
       // after the shopper chose) cannot be fulfilled as chosen.
       if (Array.isArray(item.pieces) && item.pieces.length > 0) {
