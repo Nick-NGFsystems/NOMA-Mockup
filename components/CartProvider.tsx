@@ -7,6 +7,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react'
+import { choicesKey, readStoredChoices, type BundlePieceChoice } from '@/lib/ngf-bundles'
 
 export interface CartItem {
   id: string
@@ -14,8 +15,14 @@ export interface CartItem {
   price: string
   image: string
   qty: number
-  /** Engraving text for this line, when the buyer asked for personalization. */
+  /**
+   * Engraving text for this line, when the buyer asked for personalization. For
+   * a bundle made of pieces, each piece's choices, one per line (display only:
+   * checkout sends `pieces` and the server writes this text again itself).
+   */
   customization?: string | null
+  /** For a bundle made of pieces: the option and engraving chosen per piece (lib/ngf-bundles.ts). */
+  pieces?: BundlePieceChoice[] | null
 }
 
 /**
@@ -23,7 +30,8 @@ export interface CartItem {
  * engraved "MA" and "JO" are two lines, not one with a quantity of 2. Keyed by
  * the id alone they merged, and the second buyer's text was silently dropped.
  */
-export function lineKey(item: Pick<CartItem, 'id' | 'customization'>): string {
+export function lineKey(item: Pick<CartItem, 'id' | 'customization' | 'pieces'>): string {
+  if (item.pieces && item.pieces.length > 0) return `${item.id}\u0003${choicesKey(item.pieces)}`
   return item.customization ? `${item.id}\u0000${item.customization}` : item.id
 }
 
@@ -68,15 +76,24 @@ function parseStoredCart(raw: string): CartItem[] {
   try {
     const parsed = JSON.parse(raw)
     if (!Array.isArray(parsed)) return []
-    return parsed.filter(
-      (i): i is CartItem =>
-        Boolean(i) &&
-        typeof i.id === 'string' &&
-        typeof i.title === 'string' &&
-        typeof i.price === 'string' &&
-        Number.isInteger(i.qty) &&
-        i.qty > 0,
-    )
+    return parsed
+      .filter(
+        (i): i is CartItem =>
+          Boolean(i) &&
+          typeof i.id === 'string' &&
+          typeof i.title === 'string' &&
+          typeof i.price === 'string' &&
+          Number.isInteger(i.qty) &&
+          i.qty > 0,
+      )
+      .map((i) => {
+        // Pieces that do not read back are dropped with their line's text, so
+        // the cart never shows choices it would not send. Checkout then asks
+        // for the bundle's choices again rather than charging without them.
+        if (i.pieces === undefined || i.pieces === null) return i
+        const pieces = readStoredChoices(i.pieces)
+        return pieces ? { ...i, pieces } : { ...i, pieces: null, customization: null }
+      })
   } catch {
     return []
   }

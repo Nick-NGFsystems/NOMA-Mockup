@@ -5,7 +5,9 @@ import { useCart, type CartItem } from '@/components/CartProvider'
 import type { ProductVariant } from '@/lib/site-data'
 import { EngravingTag, ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
 import { EngravableTag } from '@/components/ui/EngravableTag'
-import { engravingShape } from '@/lib/engraving-shapes'
+import { resolveEngravingShape } from '@/lib/engraving-shapes'
+import { checkBundleChoices, renderBundleChoices, type BundlePieceChoice, type NgfBundlePiece } from '@/lib/ngf-bundles'
+import { BundlePieceFields, draftsToChoices, initialDrafts, type PieceDraft } from '@/components/products/BundlePieceFields'
 
 interface ProductModalProps {
   productId: string
@@ -20,6 +22,15 @@ interface ProductModalProps {
   variantType?: string
   /** The product offers engraving (the portal's "personalizable" flag). */
   customizable?: boolean
+  /** The engraving surface set in the portal. Unset: lib/engraving-shapes.ts decides. */
+  engravingShape?: string
+  /** The longest engraving set in the portal. Unset: ENGRAVING_MAX_CHARS. */
+  engravingMaxChars?: number
+  /**
+   * A bundle made of other products: one block per piece, each with its own
+   * option and engraving, replacing the single engraving field.
+   */
+  includes?: NgfBundlePiece[]
   imageOnly?: boolean
   /**
    * Editing a line already in the cart: start on that line's option, engraving
@@ -30,6 +41,8 @@ interface ProductModalProps {
   initialVariant?: string | null
   initialEngraving?: string
   initialFont?: FontKey
+  /** Edit mode, a bundle made of pieces: the line's choices per piece. */
+  initialPieces?: BundlePieceChoice[] | null
   onSubmit?: (item: Omit<CartItem, 'qty'>) => void
   /** Edit mode only: a link to this product in the shop, under the title. */
   viewProductHref?: string
@@ -41,8 +54,8 @@ const isEngravedOption = (label: string) => /engrav/i.test(label)
 
 export function ProductModal({
   productId, name, description, price, comparePrice, image, images,
-  variants, variantType = 'Size', customizable = false, imageOnly = false,
-  mode = 'add', initialVariant = null, initialEngraving = '', initialFont = 'clean', onSubmit, viewProductHref, onClose,
+  variants, variantType = 'Size', customizable = false, engravingShape, engravingMaxChars, includes, imageOnly = false,
+  mode = 'add', initialVariant = null, initialEngraving = '', initialFont = 'clean', initialPieces = null, onSubmit, viewProductHref, onClose,
 }: ProductModalProps) {
   const { addItem } = useCart()
 
@@ -99,9 +112,17 @@ export function ProductModal({
   const [previewOpen, setPreviewOpen] = useState(false)
   const selectedLabel = hasVariants ? variants![selectedVariant].size : null
   const hasEngravedOption = Boolean(variants?.some((v) => isEngravedOption(v.size)))
+  // A bundle made of pieces is engraved piece by piece (below), never as a whole.
+  const isPieceBundle = Boolean(includes && includes.length > 0)
   const showEngraving =
-    customizable && (!hasEngravedOption || (selectedLabel !== null && isEngravedOption(selectedLabel)))
+    !isPieceBundle && customizable && (!hasEngravedOption || (selectedLabel !== null && isEngravedOption(selectedLabel)))
   const engravingRequired = showEngraving && hasEngravedOption
+  const maxChars = engravingMaxChars ?? ENGRAVING_MAX_CHARS
+
+  const [pieceDrafts, setPieceDrafts] = useState<Record<string, PieceDraft>>(() =>
+    includes && includes.length > 0 ? initialDrafts(includes, initialPieces) : {},
+  )
+  const [piecesError, setPiecesError] = useState<string | null>(null)
 
   const handleAddToCart = () => {
     const selectedSize = selectedLabel
@@ -110,6 +131,20 @@ export function ProductModal({
       setEngravingMissing(true)
       return
     }
+    // A bundle made of pieces: the same check checkout runs, so a choice the
+    // server would refuse is caught here, and the cart keeps exactly what the
+    // server will be sent.
+    let pieces: BundlePieceChoice[] | null = null
+    let pieceText: string | null = null
+    if (isPieceBundle && includes) {
+      const checked = checkBundleChoices(name, includes, draftsToChoices(includes, pieceDrafts))
+      if (!checked.ok) {
+        setPiecesError(checked.reason)
+        return
+      }
+      pieces = checked.choices
+      pieceText = renderBundleChoices(includes, checked.choices)
+    }
     const item = {
       id: selectedSize ? `${productId}-${selectedSize}` : productId,
       title: selectedSize ? `${name} (${selectedSize})` : name,
@@ -117,7 +152,8 @@ export function ProductModal({
       image,
       // Capitals, because the preview always shows capitals: what the shopper
       // saw is what the order says.
-      customization: text ? `${text.toUpperCase()} (${FONTS[font].label})` : null,
+      customization: isPieceBundle ? pieceText : text ? `${text.toUpperCase()} (${FONTS[font].label})` : null,
+      ...(isPieceBundle ? { pieces } : {}),
     }
     if (mode === 'edit' && onSubmit) {
       onSubmit(item)
@@ -420,7 +456,7 @@ export function ProductModal({
                   id="pm-engraving"
                   type="text"
                   value={engraving}
-                  maxLength={ENGRAVING_MAX_CHARS}
+                  maxLength={maxChars}
                   onChange={e => { setEngraving(e.target.value); setEngravingMissing(false); setAdded(false) }}
                   // Once the keyboard has finished opening, bring the box to the
                   // middle of the card's own scroll area.
@@ -443,7 +479,7 @@ export function ProductModal({
                 <p id="pm-engraving-hint" style={{ margin: '6px 0 0', fontSize: '0.75rem', color: engravingMissing ? '#b3261e' : 'var(--muted)' }}>
                   {engravingMissing
                     ? 'Please add the text you would like engraved.'
-                    : `Up to ${ENGRAVING_MAX_CHARS} characters.`}
+                    : `Up to ${maxChars} characters.`}
                 </p>
 
                 <div role="radiogroup" aria-label="Font style" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
@@ -483,11 +519,28 @@ export function ProductModal({
                 </button>
                 {previewOpen && (
                   <div id="pm-engraving-preview" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                    <EngravingTag text={engraving} font={font} flat shape={engravingShape(productId)} />
+                    <EngravingTag text={engraving} font={font} flat shape={resolveEngravingShape(engravingShape, productId)} />
                     <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Preview</p>
                   </div>
                 )}
               </div>
+            )}
+
+            {isPieceBundle && includes && (
+              <>
+                <BundlePieceFields
+                  pieces={includes}
+                  drafts={pieceDrafts}
+                  onChange={(key, draft) => {
+                    setPieceDrafts((prev) => ({ ...prev, [key]: draft }))
+                    setPiecesError(null)
+                    setAdded(false)
+                  }}
+                />
+                {piecesError && (
+                  <p role="alert" style={{ margin: 0, fontSize: '0.8rem', color: '#b3261e' }}>{piecesError}</p>
+                )}
+              </>
             )}
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginTop: '2px' }}>

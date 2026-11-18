@@ -126,6 +126,9 @@ export function ProductCard({ product, index, startOpen = false }: {
           variants={product.variants}
           variantType={product.variantType}
           customizable={product.customizable}
+          engravingShape={product.engravingShape}
+          engravingMaxChars={product.engravingMaxChars}
+          includes={product.includes}
           onClose={() => setModalOpen(false)}
         />
       )}

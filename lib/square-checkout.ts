@@ -161,8 +161,12 @@ export async function createOrder(args: {
         base_price_money: { amount: line.unitCents, currency: 'USD' },
         ...(line.variant ? { variation_name: line.variant } : {}),
         // The engraving travels with the line it belongs to, so it is visible
-        // on the Square Dashboard order without cross-referencing anything.
-        ...(line.customization ? { note: `Engraving: ${line.customization}`.slice(0, 500) } : {}),
+        // on the Square Dashboard order without cross-referencing anything. A
+        // bundle made of pieces carries one line per piece; Square allows a
+        // note of up to 2000 characters.
+        ...(line.customization
+          ? { note: (line.pieces ? `Pieces:\n${line.customization}` : `Engraving: ${line.customization}`).slice(0, 2000) }
+          : {}),
       })),
       ...(args.tax
         ? {

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import type { Product, ProductVariant } from '@/lib/site-data'
+import type { NgfBundlePiece } from '@/lib/ngf-bundles'
 import { showsSaleTag } from '@/lib/sale'
 import { EngravableTag } from '@/components/ui/EngravableTag'
 
@@ -21,6 +22,9 @@ interface ModalState {
   variants?: ProductVariant[]
   variantType?: string
   customizable?: boolean
+  engravingShape?: string
+  engravingMaxChars?: number
+  includes?: NgfBundlePiece[]
 }
 
 // Every field comes from the catalog. This grid used to be a website-editor
@@ -43,6 +47,9 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
       variants: product.variants,
       variantType: product.variantType,
       customizable: product.customizable,
+      engravingShape: product.engravingShape,
+      engravingMaxChars: product.engravingMaxChars,
+      includes: product.includes,
     })
   }
 
@@ -129,6 +136,9 @@ export function BestSellersGrid({ products }: BestSellersGridProps) {
           variants={modal.variants}
           variantType={modal.variantType}
           customizable={modal.customizable}
+          engravingShape={modal.engravingShape}
+          engravingMaxChars={modal.engravingMaxChars}
+          includes={modal.includes}
           onClose={() => setModal(null)}
         />
       )}

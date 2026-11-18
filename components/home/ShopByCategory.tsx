@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { ProductModal } from '@/components/ui/ProductModal'
 import { EngravableTag } from '@/components/ui/EngravableTag'
 import type { Product, ProductVariant } from '@/lib/site-data'
+import type { NgfBundlePiece } from '@/lib/ngf-bundles'
 
 const METALS = ['Gold', 'Silver', 'Pearl', 'Rose Gold', 'Diamond']
 // Engravable is a property of a piece, not a type: its own toggle that narrows the
@@ -20,6 +21,9 @@ interface ModalState {
   variants?: ProductVariant[]
   variantType?: string
   customizable?: boolean
+  engravingShape?: string
+  engravingMaxChars?: number
+  includes?: NgfBundlePiece[]
 }
 
 function filterProducts(products: Product[], metals: Set<string>, types: Set<string>, engravableOnly = false): Product[] {
@@ -215,7 +219,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
               {filtered.slice(0, 4).map((product) => (
                 <button
                   key={product.id}
-                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: product.price, comparePrice: product.comparePrice, image: product.image, images: product.images, variants: product.variants, variantType: product.variantType, customizable: product.customizable })}
+                  onClick={() => setModal({ productId: product.id, name: product.name, description: product.description, price: product.price, comparePrice: product.comparePrice, image: product.image, images: product.images, variants: product.variants, variantType: product.variantType, customizable: product.customizable, engravingShape: product.engravingShape, engravingMaxChars: product.engravingMaxChars, includes: product.includes })}
                   style={{
                     border: '1px solid var(--border)', borderRadius: '12px', overflow: 'hidden',
                     background: '#fff', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
@@ -250,6 +254,7 @@ export function ShopByCategory({ products }: ShopByCategoryProps) {
           productId={modal.productId} name={modal.name} description={modal.description}
           price={modal.price} comparePrice={modal.comparePrice} image={modal.image} images={modal.images}
           variants={modal.variants} variantType={modal.variantType} customizable={modal.customizable}
+          engravingShape={modal.engravingShape} engravingMaxChars={modal.engravingMaxChars} includes={modal.includes}
           onClose={() => setModal(null)}
         />
       )}
