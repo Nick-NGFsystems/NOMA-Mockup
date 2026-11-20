@@ -302,7 +302,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
                 <span style={{ color: 'var(--muted)' }}>
                   {i.title} × {i.qty}
                   {i.customization ? (
-                    <em style={{ display: 'block', fontSize: '0.8rem', whiteSpace: 'pre-line' }}>
+                    <em className="whitespace-pre-line" style={{ display: 'block', fontSize: '0.8rem' }}>
                       {i.pieces ? i.customization : `Engraving: ${i.customization}`}
                     </em>
                   ) : null}

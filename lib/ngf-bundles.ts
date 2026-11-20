@@ -14,7 +14,7 @@
  *
  * NO IMPORTS on purpose: it runs in the browser (the product popup and the cart),
  * on the server (checkout), and under `node --experimental-strip-types` for the
- * tests in scripts/verify-bundles.ts.
+ * tests in scripts/verify-bundles.mjs.
  */
 
 /** One piece of a bundle, as the product feed describes it. */

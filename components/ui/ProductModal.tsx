@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useCart, type CartItem } from '@/components/CartProvider'
 import type { ProductVariant } from '@/lib/site-data'
-import { EngravingTag, ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
+import { ENGRAVING_MAX_CHARS, FONTS, type FontKey } from '@/components/products/EngravingPreview'
+import { EngravingFields } from '@/components/products/EngravingFields'
 import { EngravableTag } from '@/components/ui/EngravableTag'
 import { resolveEngravingShape } from '@/lib/engraving-shapes'
 import { bundleExtras, checkBundleChoices, hasChoosablePieces, renderBundleChoices, type BundlePieceChoice, type NgfBundlePiece } from '@/lib/ngf-bundles'
@@ -109,7 +110,6 @@ export function ProductModal({
   // The font is part of the order: the shopper picks it here, the preview shows it,
   // and it travels in the engraving text ("MA (Open Sans)") so it reaches Square.
   const [font, setFont] = useState<FontKey>(initialFont)
-  const [previewOpen, setPreviewOpen] = useState(false)
   const selectedLabel = hasVariants ? variants![selectedVariant].size : null
   const hasEngravedOption = Boolean(variants?.some((v) => isEngravedOption(v.size)))
   // A bundle made of pieces is engraved piece by piece (below), never as a whole.
@@ -450,80 +450,20 @@ export function ProductModal({
 
             {showEngraving && (
               <div onClick={e => e.stopPropagation()}>
-                <label htmlFor="pm-engraving" style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: 'var(--ink)', marginBottom: '6px' }}>
-                  {engravingRequired ? 'What should we engrave?' : 'Engraving (optional)'}
-                </label>
-                <input
+                <EngravingFields
                   id="pm-engraving"
-                  type="text"
+                  label={engravingRequired ? 'What should we engrave?' : 'Engraving (optional)'}
                   value={engraving}
-                  maxLength={maxChars}
-                  onChange={e => { setEngraving(e.target.value); setEngravingMissing(false); setAdded(false) }}
-                  // Once the keyboard has finished opening, bring the box to the
-                  // middle of the card's own scroll area.
-                  onFocus={e => {
-                    const el = e.currentTarget
-                    window.setTimeout(() => el.scrollIntoView({ block: 'center', behavior: 'smooth' }), 300)
-                  }}
-                  placeholder="Initials, a name, a date…"
-                  aria-required={engravingRequired}
-                  aria-invalid={engravingMissing}
-                  aria-describedby="pm-engraving-hint"
-                  autoComplete="off"
-                  // 16px keeps iOS from zooming the page when the field is focused.
-                  style={{
-                    width: '100%', boxSizing: 'border-box', padding: '10px 12px', borderRadius: '10px',
-                    border: `1.5px solid ${engravingMissing ? '#b3261e' : 'rgba(31,27,22,0.18)'}`,
-                    fontFamily: 'inherit', fontSize: '16px', color: 'var(--ink)', background: '#fff',
-                  }}
+                  onTextChange={(t) => { setEngraving(t); setEngravingMissing(false); setAdded(false) }}
+                  font={font}
+                  onFontChange={(f) => { setFont(f); setAdded(false) }}
+                  maxChars={maxChars}
+                  shape={resolveEngravingShape(engravingShape, productId)}
+                  fontGroupLabel="Font style"
+                  required={engravingRequired}
+                  missing={engravingMissing}
+                  missingMessage="Please add the text you would like engraved."
                 />
-                <p id="pm-engraving-hint" style={{ margin: '6px 0 0', fontSize: '0.75rem', color: engravingMissing ? '#b3261e' : 'var(--muted)' }}>
-                  {engravingMissing
-                    ? 'Please add the text you would like engraved.'
-                    : `Up to ${maxChars} characters.`}
-                </p>
-
-                <div role="radiogroup" aria-label="Font style" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '10px' }}>
-                  {(Object.keys(FONTS) as FontKey[]).map((key) => {
-                    const def = FONTS[key]
-                    const active = font === key
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        onClick={() => { setFont(key); setAdded(false) }}
-                        style={{
-                          flex: '1 1 0', minWidth: '88px', padding: '8px 10px', borderRadius: '10px', cursor: 'pointer',
-                          border: active ? '1.5px solid var(--accent)' : '1px solid rgba(31,27,22,0.18)',
-                          background: active ? 'var(--beige)' : '#fff', fontFamily: 'inherit',
-                          display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px',
-                        }}
-                      >
-                        <span style={{ fontFamily: def.family, fontStyle: def.italic ? 'italic' : 'normal', fontSize: '1.1rem', color: 'var(--ink)', lineHeight: 1 }}>Aa</span>
-                        <span style={{ fontSize: '0.68rem', color: active ? 'var(--ink)' : 'var(--muted)' }}>{def.label}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => setPreviewOpen(v => !v)}
-                  aria-expanded={previewOpen}
-                  aria-controls="pm-engraving-preview"
-                  className="pm-desc-btn"
-                  style={{ marginTop: '10px', textDecoration: 'underline', textUnderlineOffset: '3px' }}
-                >
-                  {previewOpen ? 'Hide preview' : 'See how it looks'}
-                </button>
-                {previewOpen && (
-                  <div id="pm-engraving-preview" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px', marginTop: '8px' }}>
-                    <EngravingTag text={engraving} font={font} flat shape={resolveEngravingShape(engravingShape, productId)} />
-                    <p style={{ fontSize: '0.75rem', color: 'var(--muted)', margin: 0 }}>Preview</p>
-                  </div>
-                )}
               </div>
             )}
 
@@ -539,7 +479,7 @@ export function ProductModal({
                   }}
                 />
                 {piecesError && (
-                  <p role="alert" style={{ margin: 0, fontSize: '0.8rem', color: '#b3261e' }}>{piecesError}</p>
+                  <p role="alert" className="m-0 text-[0.8rem] text-[#b3261e]">{piecesError}</p>
                 )}
               </>
             )}
