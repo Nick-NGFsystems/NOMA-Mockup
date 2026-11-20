@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { lineKey, useCart } from '@/components/CartProvider'
+import { choicesKey } from '@/lib/ngf-bundles'
 import { quote, formatCents, type StoreSettings } from '@/lib/ngf-store'
 
 /**
@@ -115,7 +116,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
   const orderSignature = useMemo(
     () =>
       [
-        items.map((i) => `${i.id}x${i.qty}x${i.customization ?? ''}`).join('|'),
+        items.map((i) => `${i.id}x${i.qty}x${i.customization ?? ''}x${choicesKey(i.pieces)}`).join('|'),
         // Everything that reaches the Square order: the fulfilment recipient,
         // and the destination, which decides shipping and tax.
         form.name, form.email, form.phone,
@@ -208,7 +209,7 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
           orderRef: orderRefRef.current,
           attempt: attemptRef.current,
           expectedTotalCents: totals.totalCents,
-          items: items.map((i) => ({ id: i.id, qty: i.qty, customization: i.customization ?? null })),
+          items: items.map((i) => ({ id: i.id, qty: i.qty, customization: i.customization ?? null, pieces: i.pieces ?? null })),
           customer: form,
         }),
       })
@@ -300,7 +301,11 @@ export function CheckoutClient({ settings }: { settings: StoreSettings }) {
               <div key={lineKey(i)} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', marginBottom: '8px', color: 'var(--ink)' }}>
                 <span style={{ color: 'var(--muted)' }}>
                   {i.title} × {i.qty}
-                  {i.customization ? <em style={{ display: 'block', fontSize: '0.8rem' }}>Engraving: {i.customization}</em> : null}
+                  {i.customization ? (
+                    <em className="whitespace-pre-line" style={{ display: 'block', fontSize: '0.8rem' }}>
+                      {i.pieces ? i.customization : `Engraving: ${i.customization}`}
+                    </em>
+                  ) : null}
                 </span>
                 <span>{formatCents(Math.round(parsePrice(i.price) * 100) * i.qty)}</span>
               </div>

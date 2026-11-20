@@ -1,4 +1,12 @@
 import { ngfEndpoints } from '@/lib/ngf'
+import {
+  checkBundleChoices,
+  hasChoosablePieces,
+  readBundlePieces,
+  renderBundleChoices,
+  type BundlePieceChoice,
+  type NgfBundlePiece,
+} from '@/lib/ngf-bundles'
 
 /**
  * Products — CANONICAL. Byte-identical on every NGF site that sells.
@@ -45,6 +53,16 @@ export interface NgfProduct {
   images: string[]
   /** The shopper may add their own text, such as an engraving. */
   personalizable: boolean
+  /** The engraving surface ("bar", "disc"…) when the client set one. Missing or null: the site's own default. */
+  engravingShape?: string | null
+  /** The longest engraving, when the client set one. Missing or null: the site's own default. */
+  engravingMaxChars?: number | null
+  /**
+   * A bundle made of other products: its pieces, each engraved and optioned on
+   * its own (lib/ngf-bundles.ts). Missing or null for any other product, and for
+   * a bundle described only in words.
+   */
+  includes?: NgfBundlePiece[] | null
   tags: string[]
   badge: string | null
   featured: boolean
@@ -84,6 +102,11 @@ function readProduct(raw: unknown): NgfProduct | null {
   const priceCents = isPositiveInt(p.priceCents) ? p.priceCents : null
   if (options.length === 0 && priceCents === null) return null
 
+  // A bundle whose pieces cannot be read cannot be sold as made of pieces, and
+  // selling it as a plain product would drop every engraving: drop it.
+  const includes = readBundlePieces(p.includes)
+  if (p.includes !== undefined && p.includes !== null && includes === null) return null
+
   return {
     id: p.id,
     name: p.name,
@@ -96,6 +119,12 @@ function readProduct(raw: unknown): NgfProduct | null {
     options,
     images: strings(p.images),
     personalizable: p.personalizable === true,
+    engravingShape: typeof p.engravingShape === 'string' && p.engravingShape !== '' ? p.engravingShape : null,
+    engravingMaxChars:
+      typeof p.engravingMaxChars === 'number' && Number.isInteger(p.engravingMaxChars) && p.engravingMaxChars > 0
+        ? p.engravingMaxChars
+        : null,
+    includes,
     tags: strings(p.tags),
     badge: typeof p.badge === 'string' && p.badge !== '' ? p.badge : null,
     featured: p.featured === true,
@@ -142,6 +171,8 @@ export interface CartItemIn {
   qty: number
   /** The shopper's own text for this line, such as an engraving. */
   customization?: string | null
+  /** For a bundle made of pieces: the option and engraving chosen per piece. Checked here against the live feed. */
+  pieces?: BundlePieceChoice[] | null
 }
 
 export interface PricedLine {
@@ -156,7 +187,10 @@ export interface PricedLine {
   unitCents: number
   lineCents: number
   imageUrl: string | null
+  /** The engraving, or for a bundle made of pieces each piece's choices, one per line. */
   customization: string | null
+  /** For a bundle made of pieces: the checked choices that `customization` was written from. */
+  pieces: BundlePieceChoice[] | null
 }
 
 export type PricedCart =
@@ -242,12 +276,32 @@ export function priceCart(items: CartItemIn[], products: NgfProduct[]): PricedCa
       return { ok: false, reason: `We could not price ${product.name}. Please contact us to order.` }
     }
 
-    // Kept only on a product that offers it: a line of engraving text on a
-    // piece that cannot be engraved is an order nobody can fulfil.
-    const customization =
-      product.personalizable && typeof item.customization === 'string' && item.customization.trim()
-        ? item.customization.trim().slice(0, 200)
-        : null
+    let customization: string | null
+    let pieces: BundlePieceChoice[] | null = null
+    if (hasChoosablePieces(product.includes) && product.includes) {
+      // A bundle made of shop pieces: every piece's option and engraving is checked
+      // against the live feed, and anything that does not match refuses the
+      // order. The bundle's own price is charged whatever is chosen. A single
+      // engraving for the whole bundle is never kept: engraving is per piece.
+      const checked = checkBundleChoices(product.name, product.includes, item.pieces)
+      if (!checked.ok) return { ok: false, reason: checked.reason }
+      pieces = checked.choices
+      customization = renderBundleChoices(product.includes, checked.choices)
+    } else {
+      // Any other product, including a bundle whose only listed items are
+      // extras (nothing to choose; its own engraving box works as before).
+      // Choices for pieces this product no longer has (the client removed them
+      // after the shopper chose) cannot be fulfilled as chosen.
+      if (Array.isArray(item.pieces) && item.pieces.length > 0) {
+        return { ok: false, reason: `${product.name} has changed. Please remove it and add it to your cart again.` }
+      }
+      // Kept only on a product that offers it: a line of engraving text on a
+      // piece that cannot be engraved is an order nobody can fulfil.
+      customization =
+        product.personalizable && typeof item.customization === 'string' && item.customization.trim()
+          ? item.customization.trim().slice(0, 200)
+          : null
+    }
 
     lines.push({
       id: item.id,
@@ -259,6 +313,7 @@ export function priceCart(items: CartItemIn[], products: NgfProduct[]): PricedCa
       lineCents: unitCents * qty,
       imageUrl: product.images[0] ?? null,
       customization,
+      pieces,
     })
   }
 

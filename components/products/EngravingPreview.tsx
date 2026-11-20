@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import type { EngravingShape } from '@/lib/engraving-shapes'
+import { DEFAULT_ENGRAVING_MAX_CHARS } from '@/lib/ngf-bundles'
 
 export type FontKey = 'clean' | 'elegant' | 'classic'
 
@@ -64,9 +65,11 @@ export function parseEngraving(customization: string | null | undefined): { text
  * How many characters fit on the tag. This page has always promised 10 ("0 / 10"),
  * and the product popup's engraving box uses the same number, so what a shopper
  * previews is what they can order. Placeholder until NOMA confirms what each
- * piece physically fits.
+ * piece physically fits. One number for the whole site: lib/ngf-bundles.ts
+ * owns it (a module the server can import), and a product's own limit from the
+ * portal overrides it.
  */
-export const ENGRAVING_MAX_CHARS = 10
+export const ENGRAVING_MAX_CHARS = DEFAULT_ENGRAVING_MAX_CHARS
 
 // Maximum font size at BASE_TAG_WIDTH — text always starts here and shrinks to fit width.
 // This makes short text (e.g. "LOVE") fill the preview, while long text scales down.

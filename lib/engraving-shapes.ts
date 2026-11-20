@@ -18,3 +18,15 @@ const SHAPE_BY_PRODUCT: Record<string, EngravingShape> = {
 export function engravingShape(productId: string): EngravingShape {
   return SHAPE_BY_PRODUCT[productId] ?? 'bar'
 }
+
+const KNOWN_SHAPES: readonly EngravingShape[] = ['bar', 'disc']
+
+/**
+ * The shape to draw a product's engraving preview on. The portal's own setting
+ * (the feed's `engravingShape`) wins; while the client has not set one, the map
+ * above decides. A key this site has no blank photo for gets the bar.
+ */
+export function resolveEngravingShape(fromPortal: string | null | undefined, productId: string): EngravingShape {
+  if (fromPortal) return (KNOWN_SHAPES as readonly string[]).includes(fromPortal) ? (fromPortal as EngravingShape) : 'bar'
+  return engravingShape(productId)
+}

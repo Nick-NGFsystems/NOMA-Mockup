@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "verify-orders": "node scripts/ngf-verify-orders.mjs",
+    "test:bundles": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/verify-bundles.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

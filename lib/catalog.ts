@@ -1,5 +1,6 @@
 import { getNgfCatalog, type NgfProduct } from '@/lib/ngf-products'
 import { FALLBACK_PRODUCTS, type Product } from '@/lib/site-data'
+import { hasChoosablePieces } from '@/lib/ngf-bundles'
 
 /**
  * NOMA's products, from wherever they live right now.
@@ -72,7 +73,9 @@ export function toDisplay(p: NgfProduct): Product {
     description: p.description,
     image: p.images[0] ?? NO_PHOTO,
     images: p.images.length > 0 ? p.images : [NO_PHOTO],
-    customizable: p.personalizable,
+    // A bundle made of pieces is engraved piece by piece: it is "Engravable"
+    // when any of its pieces is, whatever the bundle's own setting says.
+    customizable: hasChoosablePieces(p.includes) ? p.includes!.some((piece) => piece.engravable) : p.personalizable,
     metals: p.tags,
     variants: hasOptions
       ? p.options.map((o) => ({
@@ -83,6 +86,9 @@ export function toDisplay(p: NgfProduct): Product {
       : undefined,
     variantType: p.optionLabel ?? undefined,
     featured: p.featured,
+    ...(p.engravingShape ? { engravingShape: p.engravingShape } : {}),
+    ...(p.engravingMaxChars ? { engravingMaxChars: p.engravingMaxChars } : {}),
+    ...(p.includes ? { includes: p.includes } : {}),
   }
 }
 

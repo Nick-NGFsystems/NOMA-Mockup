@@ -6,6 +6,7 @@ import { lineKey, useCart, type CartItem } from '@/components/CartProvider'
 import { ProductModal } from '@/components/ui/ProductModal'
 import { parseEngraving, type FontKey } from '@/components/products/EngravingPreview'
 import type { Product } from '@/lib/site-data'
+import type { BundlePieceChoice } from '@/lib/ngf-bundles'
 
 function parsePrice(p: string) {
   return Number(p.replace(/[^0-9.]/g, '')) || 0
@@ -40,6 +41,7 @@ interface Editing {
   variant: string | null
   engraving: string
   font: FontKey
+  pieces: BundlePieceChoice[] | null
 }
 
 export function CartPageClient({ products = [] }: { products?: Product[] }) {
@@ -50,7 +52,7 @@ export function CartPageClient({ products = [] }: { products?: Product[] }) {
     const line = resolveLine(item, products)
     if (!line) return
     const { text, font } = parseEngraving(item.customization)
-    setEditing({ key: lineKey(item), product: line.product, variant: line.variant, engraving: text, font })
+    setEditing({ key: lineKey(item), product: line.product, variant: line.variant, engraving: text, font, pieces: item.pieces ?? null })
   }
 
   const subtotal = items.reduce((sum, i) => sum + parsePrice(i.price) * i.qty, 0)
@@ -117,7 +119,9 @@ export function CartPageClient({ products = [] }: { products?: Product[] }) {
                     ) : item.title}
                   </h3>
                   {item.customization && (
-                    <p className="text-sm text-[var(--muted)] mt-1 break-words">Engraving: {item.customization}</p>
+                    <p className="text-sm text-[var(--muted)] mt-1 break-words whitespace-pre-line">
+                      {item.pieces ? item.customization : `Engraving: ${item.customization}`}
+                    </p>
                   )}
                   {line && (
                     <div className="flex gap-4 mt-1">
@@ -220,6 +224,10 @@ export function CartPageClient({ products = [] }: { products?: Product[] }) {
           variants={editing.product.variants}
           variantType={editing.product.variantType}
           customizable={editing.product.customizable}
+          engravingShape={editing.product.engravingShape}
+          engravingMaxChars={editing.product.engravingMaxChars}
+          includes={editing.product.includes}
+          initialPieces={editing.pieces}
           viewProductHref={productHref(editing.product.id)}
           initialVariant={editing.variant}
           initialEngraving={editing.engraving}

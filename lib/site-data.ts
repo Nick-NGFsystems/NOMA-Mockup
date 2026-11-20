@@ -1,4 +1,5 @@
 import type { NgfProduct } from '@/lib/ngf-products'
+import type { NgfBundlePiece } from '@/lib/ngf-bundles'
 
 /**
  * The DISPLAY shape the product components render: prices as the strings a
@@ -33,6 +34,12 @@ export interface Product {
   variantType?: string
   /** Marked for the homepage's Best sellers in the portal. */
   featured?: boolean
+  /** The engraving surface set in the portal ("bar", "disc"…). Unset: lib/engraving-shapes.ts decides. */
+  engravingShape?: string
+  /** The longest engraving set in the portal. Unset: ENGRAVING_MAX_CHARS. */
+  engravingMaxChars?: number
+  /** A bundle made of other products: its pieces, each optioned and engraved on its own. */
+  includes?: NgfBundlePiece[]
 }
 
 export interface Review {
