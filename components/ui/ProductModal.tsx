@@ -250,9 +250,10 @@ export function ProductModal({
         }
         .pm-thumb-btn.active { border-color: #fff; transform: scale(1.08); }
         .pm-thumb-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        /* Outside .pm-card (which scrolls), above it (card is z-index 2), so it never scrolls away */
         .pm-close {
-          position: absolute; top: 12px; right: 12px; z-index: 10;
-          width: 34px; height: 34px; border-radius: 50%;
+          position: absolute; top: 12px; right: 12px; z-index: 3;
+          width: 44px; height: 44px; border-radius: 50%;
           border: 1px solid rgba(255,255,255,0.3); background: rgba(0,0,0,0.45);
           backdrop-filter: blur(8px); color: #fff; font-size: 1.1rem; cursor: pointer;
           display: flex; align-items: center; justify-content: center; line-height: 1;
@@ -380,6 +381,8 @@ export function ProductModal({
         {/* Card wrapper — relative so corner button floats on the corner */}
         <div style={{ position: 'relative', width: '100%', maxWidth: '460px' }} onClick={e => e.stopPropagation()}>
           <button className="pm-close-corner" onClick={onClose} aria-label="Close">&times;</button>
+          {/* Phone close: sits on the wrapper, outside the scrolling card, so it stays in the corner */}
+          <button className="pm-close" onClick={onClose} aria-label="Close">&times;</button>
           <div
             className="pm-card"
             style={{ position: 'relative', zIndex: 2 }}
@@ -407,8 +410,6 @@ export function ProductModal({
                 <button className="pm-arrow" onClick={e => { e.stopPropagation(); nextImg() }} aria-label="Next" style={{ right: '10px' }}>&rsaquo;</button>
               </>
             )}
-
-            <button className="pm-close" onClick={onClose} aria-label="Close">&times;</button>
           </div>
 
           {/* Info panel */}
